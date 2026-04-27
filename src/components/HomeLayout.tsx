@@ -63,19 +63,19 @@ function SnippetWithMath({ content }: { content: string }) {
 }
 
 const TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
-  mc:    { label: 'Trắc nghiệm', color: '#6366f1', bg: '#eef2ff' },
-  tf:    { label: 'Đúng/Sai',    color: '#059669', bg: '#ecfdf5' },
-  essay: { label: 'Tự luận',     color: '#d97706', bg: '#fffbeb' },
-  sa:    { label: 'Tự luận',     color: '#d97706', bg: '#fffbeb' },
+  mc: { label: 'Trắc nghiệm', color: '#6366f1', bg: '#eef2ff' },
+  tf: { label: 'Đúng/Sai', color: '#059669', bg: '#ecfdf5' },
+  essay: { label: 'Tự luận', color: '#d97706', bg: '#fffbeb' },
+  sa: { label: 'Trả lời ngắn', color: '#d97706', bg: '#fffbeb' },
 };
 
 const DIFF_META: Record<string, { color: string; bg: string }> = {
-  easy:   { color: '#059669', bg: '#dcfce7' },
+  easy: { color: '#059669', bg: '#dcfce7' },
   medium: { color: '#d97706', bg: '#fef9c3' },
-  hard:   { color: '#dc2626', bg: '#fee2e2' },
-  dễ:     { color: '#059669', bg: '#dcfce7' },
+  hard: { color: '#dc2626', bg: '#fee2e2' },
+  dễ: { color: '#059669', bg: '#dcfce7' },
   'trung bình': { color: '#d97706', bg: '#fef9c3' },
-  khó:    { color: '#dc2626', bg: '#fee2e2' },
+  khó: { color: '#dc2626', bg: '#fee2e2' },
 };
 
 export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutProps) {
@@ -117,9 +117,9 @@ export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutPro
 
   const filteredQuestions = searchTerm
     ? questions.filter(q =>
-        getPlainSnippet(q.content, 600).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.de_id.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      getPlainSnippet(q.content, 600).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      q.de_id.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     : questions;
 
   return (
@@ -135,17 +135,17 @@ export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutPro
               <span className="hl-grad">Toán học THPT 2026</span>
             </h1>
             <p className="hl-hero-sub">
-              Sẵn sàng cho Kỳ thi Tốt nghiệp THPT với kho đề thi và câu hỏi chất lượng cao, 
+              Sẵn sàng cho Kỳ thi Tốt nghiệp THPT với kho đề thi và câu hỏi chất lượng cao,
               được chọn lọc và có lời giải chi tiết.
             </p>
-            
+
             <a href="/de-thi-thu-tn-thpt-mon-toan-2026" className="hl-cta-large">
               <span className="hl-cta-icon">🎯</span>
               <span className="hl-cta-text">Làm đề thi thử TN THPT 2026 - Môn Toán</span>
               <span className="hl-cta-arr">→</span>
             </a>
           </div>
-          
+
           <div className="hl-hero-image-wrap">
             <img src="/math_exam_2026.png" alt="Math Exam 2026" className="hl-hero-image" />
           </div>
@@ -154,10 +154,10 @@ export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutPro
         {/* Stats bar */}
         <div className="hl-stats">
           {[
-            { icon: '📂', value: examSets.length,  label: 'Đề thi bám sát cấu trúc' },
-            { icon: '❓', value: totalQuestions,    label: 'Câu hỏi chất lượng' },
-            { icon: '💡', value: '100%',            label: 'Có lời giải chi tiết' },
-            { icon: '∑',  value: 'Trực quan',       label: 'Toán học chuẩn LaTeX' },
+            { icon: '📂', value: examSets.length, label: 'Đề thi bám sát cấu trúc' },
+            { icon: '❓', value: totalQuestions, label: 'Câu hỏi chất lượng' },
+            { icon: '💡', value: '100%', label: 'Có lời giải chi tiết' },
+            { icon: '∑', value: 'Trực quan', label: 'Toán học chuẩn LaTeX' },
           ].map(s => (
             <div key={s.label} className="hl-stat">
               <span className="hl-stat-icon">{s.icon}</span>
@@ -178,7 +178,7 @@ export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutPro
               Đề thi được biên soạn bám sát định dạng cấu trúc đề thi Tốt nghiệp THPT năm 2026 môn Toán do Bộ GD&ĐT công bố, bao gồm các phần Trắc nghiệm, Nhiều đáp án, và Trả lời ngắn.
             </p>
           </div>
-          
+
           <div className="hl-feature-card">
             <div className="hl-feature-icon">⏱️</div>
             <h3 className="hl-feature-title">Trải nghiệm thi thật</h3>
@@ -186,7 +186,7 @@ export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutPro
               Giao diện làm bài trực quan, đồng hồ đếm ngược 90 phút và hệ thống chấm điểm tự động ngay sau khi nộp bài giúp bạn đánh giá năng lực chính xác.
             </p>
           </div>
-          
+
           <div className="hl-feature-card">
             <div className="hl-feature-icon">💡</div>
             <h3 className="hl-feature-title">Lời giải chi tiết</h3>

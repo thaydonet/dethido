@@ -91,10 +91,10 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
       const type = getQuestionType(q);
       const matchType = filterType === 'all' || type === filterType;
       const matchDe = filterDe === 'all' || q.de_id === filterDe;
-      const matchSearch = searchTerm === '' || 
+      const matchSearch = searchTerm === '' ||
         q.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
         q.de_id.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       return matchType && matchDe && matchSearch;
     });
   }, [questions, filterType, filterDe, searchTerm]);
@@ -111,13 +111,13 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
         try {
           // @ts-expect-error - No types available for auto-render.js
           const renderMathInElement = (await import('katex/dist/contrib/auto-render.js')).default;
-          
+
           const elements = document.querySelectorAll('.math-content');
           elements.forEach((element) => {
             renderMathInElement(element, {
               delimiters: [
-                {left: '$$', right: '$$', display: true},
-                {left: '$', right: '$', display: false}
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false }
               ],
               throwOnError: false
             });
@@ -126,7 +126,7 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
           console.error('Error rendering math:', error);
         }
       };
-      
+
       renderMath();
     }
   }, [filteredQuestions, editingId, showSolution]);
@@ -151,7 +151,7 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
             <div className={styles.statLabel}>Tổng câu hỏi</div>
           </div>
         </div>
-        
+
         <div className={styles.statCard}>
           <div className={styles.statIcon}>📝</div>
           <div>
@@ -159,20 +159,20 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
             <div className={styles.statLabel}>Trắc nghiệm (MCQ)</div>
           </div>
         </div>
-        
+
         <div className={styles.statCard}>
           <div className={styles.statIcon}>✅</div>
           <div>
             <div className={styles.statValue}>{stats.typeCount.msq || 0}</div>
-            <div className={styles.statLabel}>Nhiều đáp án (MSQ)</div>
+            <div className={styles.statLabel}>Đúng - sai (MSQ)</div>
           </div>
         </div>
-        
+
         <div className={styles.statCard}>
           <div className={styles.statIcon}>✏️</div>
           <div>
             <div className={styles.statValue}>{stats.typeCount.sa || 0}</div>
-            <div className={styles.statLabel}>Tự luận (SA)</div>
+            <div className={styles.statLabel}>Trả lời ngắn (SA)</div>
           </div>
         </div>
       </div>
@@ -185,20 +185,20 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
           onChange={(e) => setSearchTerm(e.target.value)}
           className={styles.searchInput}
         />
-        
-        <select 
-          value={filterType} 
+
+        <select
+          value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
           className={styles.select}
         >
           <option value="all">Tất cả loại</option>
           <option value="mcq">Trắc nghiệm (MCQ)</option>
-          <option value="msq">Nhiều đáp án (MSQ)</option>
-          <option value="sa">Tự luận (SA)</option>
+          <option value="msq">Đúng - sai (MSQ)</option>
+          <option value="sa">Trả lời ngắn (SA)</option>
         </select>
-        
-        <select 
-          value={filterDe} 
+
+        <select
+          value={filterDe}
           onChange={(e) => setFilterDe(e.target.value)}
           className={styles.select}
         >
@@ -227,14 +227,14 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
                 </span>
               </div>
               <div className={styles.actions}>
-                <button 
+                <button
                   onClick={() => setEditingId(editingId === q.id ? null : q.id)}
                   className={styles.editBtn}
                   title="Xem chi tiết"
                 >
                   {editingId === q.id ? '▲' : '▼'}
                 </button>
-                <button 
+                <button
                   onClick={() => handleDelete(q.id)}
                   className={styles.deleteBtn}
                   title="Xóa"
@@ -243,22 +243,22 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
                 </button>
               </div>
             </div>
-            
-            <div 
+
+            <div
               className={`${styles.questionContent} math-content`}
               dangerouslySetInnerHTML={{ __html: q.content.substring(0, 200) + (q.content.length > 200 ? '...' : '') }}
             />
-            
+
             {editingId === q.id && mounted && (
               <div className={styles.questionDetails}>
                 <div className={styles.detailSection}>
                   <strong>Nội dung đầy đủ:</strong>
-                  <div 
+                  <div
                     className="math-content"
                     dangerouslySetInnerHTML={{ __html: q.content }}
                   />
                 </div>
-                
+
                 {q.options && (
                   <div className={styles.detailSection}>
                     <strong>Các đáp án:</strong>
@@ -266,7 +266,7 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
                       {Object.entries(q.options).map(([key, value]) => (
                         <div key={key} className={styles.optionItem}>
                           <span className={styles.optionLabel}>{key}.</span>
-                          <span 
+                          <span
                             className="math-content"
                             dangerouslySetInnerHTML={{ __html: String(value) }}
                           />
@@ -275,27 +275,27 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
                     </div>
                   </div>
                 )}
-                
+
                 {q.answer && (
                   <div className={styles.detailSection}>
                     <strong>Đáp án đúng:</strong> <span className={styles.correctAnswer}>{q.answer}</span>
                   </div>
                 )}
-                
+
                 {q.image_url && (
                   <div className={styles.detailSection}>
                     <strong>Hình ảnh:</strong>
                     <img src={q.image_url} alt="Question" className={styles.questionImage} />
                   </div>
                 )}
-                
+
                 {(q.explanation || q.metadata?.explanation || q.metadata?.loi_giai) && (() => {
                   const solutionText = q.explanation || q.metadata?.explanation || q.metadata?.loi_giai;
                   return (
                     <div className={styles.detailSection}>
                       <div className={styles.solutionHeader}>
                         <strong>💡 Lời giải:</strong>
-                        <button 
+                        <button
                           onClick={() => toggleSolution(q.id)}
                           className={styles.toggleBtn}
                         >
@@ -303,7 +303,7 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
                         </button>
                       </div>
                       {showSolution[q.id] && (
-                        <div 
+                        <div
                           className={`${styles.solutionContent} math-content`}
                           dangerouslySetInnerHTML={{ __html: solutionText }}
                         />
@@ -311,7 +311,7 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
                     </div>
                   );
                 })()}
-                
+
                 {q.metadata && (
                   <div className={styles.detailSection}>
                     <strong>Thông tin bổ sung:</strong>

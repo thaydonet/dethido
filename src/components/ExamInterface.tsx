@@ -68,7 +68,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
 
   const handleAnswerChange = (questionNumber: number, answer: string) => {
     if (isSubmitted) return;
-    
+
     setAnswers((prev) => ({
       ...prev,
       [questionNumber]: answer,
@@ -82,7 +82,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
       );
       if (!confirmSubmit) return;
     }
-    
+
     setIsSubmitted(true);
     setTimeout(() => {
       document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
@@ -94,20 +94,20 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
     questions.forEach((q) => {
       const userAnswer = answers[q.exam_number];
       const type = getQuestionType(q);
-      
+
       if (type === 'msq') {
         // MSQ: Check if all options are answered correctly
         if (!userAnswer) return;
-        
+
         const userAnswerObj: Record<string, boolean> = {};
         userAnswer.split(',').forEach(pair => {
           const [key, value] = pair.split(':');
           userAnswerObj[key] = value === 'true';
         });
-        
+
         const correctAnswers = q.answer.split(',');
         let allCorrect = true;
-        
+
         ['A', 'B', 'C', 'D'].forEach(option => {
           const shouldBeTrue = correctAnswers.includes(option);
           const userSaysTrue = userAnswerObj[option] === true;
@@ -115,7 +115,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
             allCorrect = false;
           }
         });
-        
+
         if (allCorrect) correct++;
       } else {
         // MCQ and SA: exact match
@@ -161,7 +161,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
       {/* Sticky Header */}
       <header className={`${styles.header} ${!isMobileMenuOpen ? styles.headerCollapsed : ''}`}>
         <div className={styles.mobileToggle}>
-          <button 
+          <button
             className={styles.hamburgerBtn}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
@@ -203,10 +203,10 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
             Phần 1: Trắc nghiệm (MCQ) - {mcqCount} câu
           </div>
           <div className={`${styles.sectionBadge} ${styles.section2Badge}`}>
-            Phần 2: Nhiều đáp án (MSQ) - {msqCount} câu
+            Phần 2: Đúng - sai (MSQ) - {msqCount} câu
           </div>
           <div className={`${styles.sectionBadge} ${styles.section3Badge}`}>
-            Phần 3: Tự luận (SA) - {saCount} câu
+            Phần 3: Trả lời ngắn (SA) - {saCount} câu
           </div>
         </div>
 
@@ -253,11 +253,9 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
                       return (
                         <label
                           key={option}
-                          className={`${styles.optionItem} ${
-                            isSelected ? styles.selected : ''
-                          } ${showCorrect ? styles.correctOption : ''} ${
-                            showWrong ? styles.wrongOption : ''
-                          }`}
+                          className={`${styles.optionItem} ${isSelected ? styles.selected : ''
+                            } ${showCorrect ? styles.correctOption : ''} ${showWrong ? styles.wrongOption : ''
+                            }`}
                         >
                           <input
                             type="radio"
@@ -284,7 +282,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
                 {/* MSQ Options - Đúng/Sai for each option */}
                 {type === 'msq' && q.options && (
                   <div className={styles.msqList}>
-                    {['A', 'B', 'C', 'D'].map((option) => {
+                    {['a', 'b', 'c', 'd'].map((option) => {
                       const optionKey = `option_${option.toLowerCase()}`;
                       const optionContent = q.options[optionKey];
                       if (!optionContent) return null;
@@ -301,18 +299,17 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
                       const userChoice = userAnswerObj[option];
                       const correctAnswers = q.answer.split(',');
                       const isCorrectAnswer = correctAnswers.includes(option);
-                      
+
                       const showResult = isSubmitted;
                       const isCorrect = showResult && userChoice === isCorrectAnswer;
                       const isWrong = showResult && userChoice !== undefined && userChoice !== isCorrectAnswer;
 
                       return (
-                        <div 
-                          key={option} 
-                          className={`${styles.msqItem} ${
-                            showResult && isCorrect ? styles.msqCorrect : 
-                            showResult && isWrong ? styles.msqWrong : ''
-                          }`}
+                        <div
+                          key={option}
+                          className={`${styles.msqItem} ${showResult && isCorrect ? styles.msqCorrect :
+                              showResult && isWrong ? styles.msqWrong : ''
+                            }`}
                         >
                           <div className={styles.msqContent}>
                             <span className={styles.msqLabel}>{option})</span>
@@ -435,9 +432,9 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
             </div>
             <div className={styles.feedback}>
               {calculateScore() / questions.length >= 0.8 ? '🎉 Xuất sắc!' :
-               calculateScore() / questions.length >= 0.6 ? '👍 Khá tốt!' :
-               calculateScore() / questions.length >= 0.4 ? '💪 Cố gắng thêm!' :
-               '📚 Cần ôn tập thêm!'}
+                calculateScore() / questions.length >= 0.6 ? '👍 Khá tốt!' :
+                  calculateScore() / questions.length >= 0.4 ? '💪 Cố gắng thêm!' :
+                    '📚 Cần ôn tập thêm!'}
             </div>
             <div className={styles.resultsActions}>
               <button onClick={() => router.push('/')} className={styles.homeButtonResult}>
