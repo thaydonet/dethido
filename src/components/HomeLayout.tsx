@@ -1,126 +1,19 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { InlineMath, BlockMath } from 'react-katex';
-import QuestionCard from './QuestionCard';
-
-interface Question {
-  id: string;
-  de_id: string;
-  so_cau: number;
-  phan: string;
-  content: string;
-  options: any;
-  answer: string;
-  image_url?: string;
-  metadata: any;
-  created_at: string;
-}
 
 interface ExamSet {
   de_id: string;
   count: number;
+  type: 'generated' | 'original';
 }
 
 interface HomeLayoutProps {
-  initialQuestions: Question[];
   examSets: ExamSet[];
 }
 
-// Plain-text fallback for server render (no hydration mismatch)
-function getPlainSnippet(html: string, maxLen = 180): string {
-  if (!html) return '';
-  return html
-    .replace(/<[^>]+>/g, '')
-    .replace(/\$\$[\s\S]*?\$\$/g, '')
-    .replace(/\$[\s\S]*?\$/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, maxLen);
-}
-
-// Client-only: render LaTeX in snippet (max first ~250 chars of content)
-function SnippetWithMath({ content }: { content: string }) {
-  const stripped = content.replace(/<[^>]+>/g, '');
-  const preview = stripped.length > 260 ? stripped.slice(0, 260) + '…' : stripped;
-  const parts = preview.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
-
-  return (
-    <span>
-      {parts.map((part, i) => {
-        if (part.startsWith('$$') && part.endsWith('$$')) {
-          try { return <BlockMath key={i} math={part.slice(2, -2)} />; }
-          catch { return <span key={i}>{part}</span>; }
-        }
-        if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
-          try { return <InlineMath key={i} math={part.slice(1, -1)} />; }
-          catch { return <span key={i}>{part}</span>; }
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </span>
-  );
-}
-
-const TYPE_META: Record<string, { label: string; color: string; bg: string }> = {
-  mc: { label: 'Trắc nghiệm', color: '#6366f1', bg: '#eef2ff' },
-  tf: { label: 'Đúng/Sai', color: '#059669', bg: '#ecfdf5' },
-  essay: { label: 'Tự luận', color: '#d97706', bg: '#fffbeb' },
-  sa: { label: 'Trả lời ngắn', color: '#d97706', bg: '#fffbeb' },
-};
-
-const DIFF_META: Record<string, { color: string; bg: string }> = {
-  easy: { color: '#059669', bg: '#dcfce7' },
-  medium: { color: '#d97706', bg: '#fef9c3' },
-  hard: { color: '#dc2626', bg: '#fee2e2' },
-  dễ: { color: '#059669', bg: '#dcfce7' },
-  'trung bình': { color: '#d97706', bg: '#fef9c3' },
-  khó: { color: '#dc2626', bg: '#fee2e2' },
-};
-
-export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutProps) {
-  const [selectedExam, setSelectedExam] = useState<string | null>(null);
-  const [questions, setQuestions] = useState(initialQuestions);
-  const [loading, setLoading] = useState(false);
-  const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [mounted, setMounted] = useState(false);
-  const mainRef = useRef<HTMLElement>(null);
-
-  useEffect(() => { setMounted(true); }, []);
-
-  const handleExamClick = async (deId: string) => {
-    setSelectedExam(deId);
-    setLoading(true);
-    setExpandedQuestion(null);
-    setSearchTerm('');
-    try {
-      const res = await fetch(`/api/exams/${encodeURIComponent(deId)}`);
-      const data = await res.json();
-      setQuestions(data.data || []);
-    } catch {
-      setQuestions([]);
-    } finally {
-      setLoading(false);
-      mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleShowAll = () => {
-    setSelectedExam(null);
-    setQuestions(initialQuestions);
-    setExpandedQuestion(null);
-    setSearchTerm('');
-  };
-
+export default function HomeLayout({ examSets }: HomeLayoutProps) {
   const totalQuestions = examSets.reduce((s, e) => s + e.count, 0);
-
-  const filteredQuestions = searchTerm
-    ? questions.filter(q =>
-      getPlainSnippet(q.content, 600).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.de_id.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    : questions;
+  const generatedCount = examSets.filter(e => e.type === 'generated').length;
 
   return (
     <div className="hl-root">
@@ -141,9 +34,12 @@ export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutPro
 
             <a href="/de-thi-thu-tn-thpt-mon-toan-2026" className="hl-cta-large">
               <span className="hl-cta-icon">🎯</span>
-              <span className="hl-cta-text">Làm đề thi thử TN THPT 2026 - Môn Toán</span>
+              <span className="hl-cta-text">Làm đề thi thử TN THPT Môn Toán 2026</span>
               <span className="hl-cta-arr">→</span>
             </a>
+            <p className="hl-hero-sub">
+              (Mỗi lần bạn làm đề thi sẽ thay đổi câu hỏi ngẫu nhiên).
+            </p>
           </div>
 
           <div className="hl-hero-image-wrap">
@@ -193,6 +89,25 @@ export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutPro
             <p className="hl-feature-desc">
               Mỗi câu hỏi đều đi kèm lời giải rõ ràng, mạch lạc, kết hợp đồ thị và phương trình chuẩn LaTeX giúp học sinh dễ dàng nắm bắt phương pháp giải.
             </p>
+          </div>
+        </div>
+
+        <div className="hl-exam-list">
+          <h2 className="hl-section-title">Danh sách Đề thi</h2>
+          {examSets.length === 0 && (
+            <p style={{ textAlign: 'center', color: '#64748b' }}>Chưa có đề thi nào. Admin có thể tạo đề trong trang quản trị.</p>
+          )}
+          <div className="hl-exams-grid">
+            {examSets.map(exam => (
+              <a key={exam.de_id} href={`/${encodeURIComponent(exam.de_id)}`} className="hl-exam-card">
+                <div className="hl-exam-icon">{exam.type === 'generated' ? '✨' : '📚'}</div>
+                <div className="hl-exam-info">
+                  <h3 className="hl-exam-name">{exam.de_id}</h3>
+                  <p className="hl-exam-count">{exam.count} câu hỏi{exam.type === 'generated' ? ' · Đề tổng hợp' : ''}</p>
+                </div>
+                <div className="hl-exam-arr">→</div>
+              </a>
+            ))}
           </div>
         </div>
       </div>
@@ -359,6 +274,74 @@ export default function HomeLayout({ initialQuestions, examSets }: HomeLayoutPro
           .hl-stat { border-bottom: 1px solid rgba(255,255,255,0.1); }
           .hl-stat:nth-child(odd) { border-left: none; }
           .hl-body-simplified { padding: 3rem 1rem; }
+        }
+
+        /* ── Exam List ── */
+        .hl-exam-list {
+          margin-top: 4rem;
+        }
+        .hl-section-title {
+          font-family: 'Outfit', sans-serif;
+          font-size: 2rem;
+          color: #1e293b;
+          margin-bottom: 2rem;
+          text-align: center;
+        }
+        .hl-exams-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 1.5rem;
+        }
+        .hl-exam-card {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          background: white;
+          padding: 1.5rem;
+          border-radius: 16px;
+          text-decoration: none;
+          color: inherit;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          transition: all 0.3s;
+          border: 1px solid #e2e8f0;
+        }
+        .hl-exam-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+          border-color: #6366f1;
+        }
+        .hl-exam-icon {
+          font-size: 2rem;
+          background: #f1f5f9;
+          width: 50px;
+          height: 50px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 12px;
+        }
+        .hl-exam-info {
+          flex: 1;
+        }
+        .hl-exam-name {
+          margin: 0 0 0.25rem 0;
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #1e293b;
+          word-break: break-word;
+        }
+        .hl-exam-count {
+          margin: 0;
+          color: #64748b;
+          font-size: 0.9rem;
+        }
+        .hl-exam-arr {
+          color: #6366f1;
+          font-weight: bold;
+          transition: transform 0.2s;
+        }
+        .hl-exam-card:hover .hl-exam-arr {
+          transform: translateX(4px);
         }
       `}</style>
     </div>

@@ -22,7 +22,8 @@ interface ExamInterfaceProps {
   questions: Question[];
 }
 
-export default function ExamInterface({ questions }: ExamInterfaceProps) {
+export default function ExamInterface({ questions: initialQuestions }: ExamInterfaceProps) {
+  const [displayQuestions, setDisplayQuestions] = useState(initialQuestions);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(90 * 60); // 90 minutes
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -34,12 +35,31 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
     setShowExplanation(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Reset state when component mounts with new questions
-  useEffect(() => {
+  // Shuffle within each type section (MCQ stays with MCQ, MSQ with MSQ, SA with SA)
+  const handleShuffle = () => {
+    const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+    const mcqs = shuffle(initialQuestions.filter(q => (q.metadata?.type || 'mcq') === 'mcq'));
+    const msqs = shuffle(initialQuestions.filter(q => q.metadata?.type === 'msq'));
+    const sas = shuffle(initialQuestions.filter(q => q.metadata?.type === 'sa'));
+    const shuffled = [
+      ...mcqs,
+      ...msqs,
+      ...sas,
+    ].map((q, i) => ({ ...q, exam_number: i + 1 }));
+    setDisplayQuestions(shuffled);
     setAnswers({});
     setTimeLeft(90 * 60);
     setIsSubmitted(false);
-  }, [questions]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Reset state when component mounts with new questions
+  useEffect(() => {
+    setDisplayQuestions(initialQuestions);
+    setAnswers({});
+    setTimeLeft(90 * 60);
+    setIsSubmitted(false);
+  }, [initialQuestions]);
 
   // Timer countdown
   useEffect(() => {
@@ -78,7 +98,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
   const handleSubmit = (autoSubmit = false) => {
     if (!autoSubmit) {
       const confirmSubmit = confirm(
-        `Bạn đã làm ${Object.keys(answers).length}/${questions.length} câu.\nBạn có chắc muốn nộp bài?`
+        `Bạn đã làm ${Object.keys(answers).length}/${displayQuestions.length} câu.\nBạn có chắc muốn nộp bài?`
       );
       if (!confirmSubmit) return;
     }
@@ -91,7 +111,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
 
   const calculateScore = () => {
     let correct = 0;
-    questions.forEach((q) => {
+    displayQuestions.forEach((q) => {
       const userAnswer = answers[q.exam_number];
       const type = getQuestionType(q);
 
@@ -138,11 +158,11 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
     return 'section3';
   };
 
-  const mcqCount = questions.filter(q => getQuestionType(q) === 'mcq').length;
-  const msqCount = questions.filter(q => getQuestionType(q) === 'msq').length;
-  const saCount = questions.filter(q => getQuestionType(q) === 'sa').length;
+  const mcqCount = displayQuestions.filter(q => getQuestionType(q) === 'mcq').length;
+  const msqCount = displayQuestions.filter(q => getQuestionType(q) === 'msq').length;
+  const saCount = displayQuestions.filter(q => getQuestionType(q) === 'sa').length;
 
-  if (questions.length === 0) {
+  if (displayQuestions.length === 0) {
     return (
       <div className={styles.container}>
         <div className={styles.error}>
@@ -182,7 +202,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
             <div>
               <h1 className={styles.examTitle}>Đề thi thử TN THPT Môn Toán - 2026</h1>
               <p className={styles.examInfo}>
-                Thời gian: 90 phút | Tổng số câu: {questions.length} ({mcqCount} MCQ + {msqCount} MSQ + {saCount} SA)
+                Thời gian: 90 phút | Tổng số câu: {displayQuestions.length} ({mcqCount} MCQ + {msqCount} MSQ + {saCount} SA)
               </p>
             </div>
           </div>
@@ -212,7 +232,7 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
 
         {/* All Questions */}
         <div className={styles.questionsList}>
-          {questions.map((q) => {
+          {displayQuestions.map((q) => {
             const type = getQuestionType(q);
             const userAnswer = answers[q.exam_number];
             const isCorrect = isSubmitted && userAnswer === q.answer;
@@ -423,25 +443,25 @@ export default function ExamInterface({ questions }: ExamInterfaceProps) {
             <h2 className={styles.resultsTitle}>🎓 Kết quả bài thi</h2>
             <div className={styles.scoreDisplay}>
               <div className={styles.score}>
-                {calculateScore()}/{questions.length}
+                {calculateScore()}/{displayQuestions.length}
               </div>
               <div className={styles.scoreLabel}>Số câu đúng</div>
             </div>
             <div className={styles.scorePercentage}>
-              Điểm: {((calculateScore() / questions.length) * 10).toFixed(2)}/10
+              Điểm: {((calculateScore() / displayQuestions.length) * 10).toFixed(2)}/10
             </div>
             <div className={styles.feedback}>
-              {calculateScore() / questions.length >= 0.8 ? '🎉 Xuất sắc!' :
-                calculateScore() / questions.length >= 0.6 ? '👍 Khá tốt!' :
-                  calculateScore() / questions.length >= 0.4 ? '💪 Cố gắng thêm!' :
+              {calculateScore() / displayQuestions.length >= 0.8 ? '🎉 Xuất sắc!' :
+                calculateScore() / displayQuestions.length >= 0.6 ? '👍 Khá tốt!' :
+                  calculateScore() / displayQuestions.length >= 0.4 ? '💪 Cố gắng thêm!' :
                     '📚 Cần ôn tập thêm!'}
             </div>
             <div className={styles.resultsActions}>
               <button onClick={() => router.push('/')} className={styles.homeButtonResult}>
                 🏠 Về trang chủ
               </button>
-              <button onClick={() => router.refresh()} className={styles.retryButton}>
-                🔄 Làm đề mới
+              <button onClick={handleShuffle} className={styles.retryButton}>
+                🔀 Làm lại (xáo đề)
               </button>
             </div>
             <p className={styles.retryNote}>Xem lời giải từng câu bên dưới ↓</p>

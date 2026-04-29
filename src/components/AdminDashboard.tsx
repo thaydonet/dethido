@@ -31,7 +31,25 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showSolution, setShowSolution] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
+
+  // Generator state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedExam, setGeneratedExam] = useState<Question[] | null>(null);
+  const [examName, setExamName] = useState('');
+  const [isSavingExam, setIsSavingExam] = useState(false);
+
+  // Exam papers list
+  const [examPapers, setExamPapers] = useState<{ id: string; name: string; question_ids: string[] }[]>([]);
+
   const router = useRouter();
+
+  // Fetch exam_papers on mount
+  useEffect(() => {
+    fetch('/api/admin/exams')
+      .then(r => r.json())
+      .then(d => setExamPapers(d.data || []))
+      .catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     await fetch('/api/admin/logout', { method: 'POST' });
@@ -71,6 +89,95 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
       if (opts.option_a && opts.option_b) return 'mcq';
     }
     return 'sa';
+  };
+
+  const handleGenerateExam = () => {
+    const mcqs = questions.filter(q => getQuestionType(q) === 'mcq');
+    const msqs = questions.filter(q => getQuestionType(q) === 'msq');
+    const sas = questions.filter(q => getQuestionType(q) === 'sa');
+
+    if (mcqs.length < 12 || msqs.length < 4 || sas.length < 6) {
+      alert(`Không đủ câu hỏi để tạo đề! Cần ít nhất 12 MCQ, 4 MSQ, 6 SA. Hiện có: ${mcqs.length} MCQ, ${msqs.length} MSQ, ${sas.length} SA.`);
+      return;
+    }
+
+    const shuffle = (array: any[]) => [...array].sort(() => 0.5 - Math.random());
+    const selectedMCQs = shuffle(mcqs).slice(0, 12);
+    const selectedMSQs = shuffle(msqs).slice(0, 4);
+    const selectedSAs = shuffle(sas).slice(0, 6);
+
+    setGeneratedExam([...selectedMCQs, ...selectedMSQs, ...selectedSAs]);
+    setIsGenerating(true);
+  };
+
+  const handleReplaceQuestion = (index: number) => {
+    if (!generatedExam) return;
+    const currentQ = generatedExam[index];
+    const type = getQuestionType(currentQ);
+    
+    const availablePool = questions.filter(q => 
+      getQuestionType(q) === type && 
+      !generatedExam.some(gq => gq.id === q.id)
+    );
+
+    if (availablePool.length === 0) {
+      alert('Không còn câu hỏi khác cùng loại để thay thế!');
+      return;
+    }
+
+    const replacement = availablePool[Math.floor(Math.random() * availablePool.length)];
+    const newExam = [...generatedExam];
+    newExam[index] = replacement;
+    setGeneratedExam(newExam);
+  };
+
+  const handleSaveExam = async () => {
+    if (!examName.trim()) {
+      alert('Vui lòng nhập tên đề!');
+      return;
+    }
+    if (!generatedExam || generatedExam.length === 0) return;
+
+    setIsSavingExam(true);
+    try {
+      const res = await fetch('/api/admin/exams/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          examName: examName.trim(),
+          questionIds: generatedExam.map(q => q.id)
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Tạo đề "${examName.trim()}" thành công! Truy cập tại: /${encodeURIComponent(examName.trim())}`);
+        setIsGenerating(false);
+        setGeneratedExam(null);
+        setExamName('');
+        // Refresh exam papers list without full reload
+        fetch('/api/admin/exams')
+          .then(r => r.json())
+          .then(d => setExamPapers(d.data || []))
+          .catch(() => {});
+      } else {
+        alert('Lỗi: ' + data.error);
+      }
+    } catch (err) {
+      alert('Có lỗi xảy ra khi lưu đề');
+    } finally {
+      setIsSavingExam(false);
+    }
+  };
+
+  const handleDeleteExamPaper = async (id: string, name: string) => {
+    if (!confirm(`Bạn có chắc muốn xóa đề "${name}"?`)) return;
+    const res = await fetch(`/api/admin/exams/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setExamPapers(prev => prev.filter(p => p.id !== id));
+    } else {
+      alert('Có lỗi khi xóa đề');
+    }
   };
 
   const stats = useMemo(() => {
@@ -129,7 +236,7 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
 
       renderMath();
     }
-  }, [filteredQuestions, editingId, showSolution]);
+  }, [filteredQuestions, editingId, showSolution, generatedExam, isGenerating]);
 
   return (
     <div className={styles.container}>
@@ -177,6 +284,68 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
         </div>
       </div>
 
+      {/* ── Exam Papers List ── */}
+      {examPapers.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1a202c', marginBottom: '1rem' }}>
+            ✨ Đề thi đã tạo ({examPapers.length})
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {examPapers.map(paper => (
+              <div key={paper.id} style={{
+                background: 'white',
+                borderRadius: '10px',
+                padding: '1rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
+                border: '1px solid #e2e8f0',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>📋</span>
+                  <div>
+                    <div style={{ fontWeight: 700, color: '#1a202c' }}>{paper.name}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#718096' }}>{(paper.question_ids || []).length} câu hỏi</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <a
+                    href={`/${encodeURIComponent(paper.name)}`}
+                    target="_blank"
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: '#667eea',
+                      color: 'white',
+                      borderRadius: '6px',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    🔗 Xem đề
+                  </a>
+                  <button
+                    onClick={() => handleDeleteExamPaper(paper.id, paper.name)}
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      background: '#fed7d7',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                    }}
+                    title="Xóa đề"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={styles.filters}>
         <input
           type="text"
@@ -210,9 +379,14 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
       </div>
 
       <div className={styles.results}>
-        <p className={styles.resultCount}>
-          Hiển thị {filteredQuestions.length} / {stats.total} câu hỏi
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p className={styles.resultCount}>
+            Hiển thị {filteredQuestions.length} / {stats.total} câu hỏi
+          </p>
+          <button onClick={handleGenerateExam} className={styles.generateBtn}>
+            ✨ Tạo đề ngẫu nhiên (12 MCQ + 4 MSQ + 6 SA)
+          </button>
+        </div>
       </div>
 
       <div className={styles.questionList}>
@@ -246,7 +420,13 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
 
             <div
               className={`${styles.questionContent} math-content`}
-              dangerouslySetInnerHTML={{ __html: q.content.substring(0, 200) + (q.content.length > 200 ? '...' : '') }}
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
+              dangerouslySetInnerHTML={{ __html: q.content }}
             />
 
             {editingId === q.id && mounted && (
@@ -328,6 +508,80 @@ export default function AdminDashboard({ initialQuestions }: AdminDashboardProps
           </div>
         ))}
       </div>
+
+      {isGenerating && generatedExam && (
+        <div className={styles.generatorOverlay}>
+          <div className={styles.generatorModal}>
+            <div className={styles.generatorHeader}>
+              <h2>Tạo đề mới (22 câu)</h2>
+              <button onClick={() => setIsGenerating(false)} className={styles.closeBtn}>&times;</button>
+            </div>
+            
+            <div className={styles.generatorContent}>
+              <div className={styles.questionList}>
+                {generatedExam.map((q, index) => (
+                  <div key={q.id + index} className={styles.questionCard}>
+                    <div className={styles.questionHeader}>
+                      <div className={styles.questionMeta}>
+                        <span className={styles.badge}>Câu {index + 1}</span>
+                        <span className={`${styles.badge} ${styles[getQuestionType(q)]}`}>
+                          {getQuestionType(q).toUpperCase()}
+                        </span>
+                        <span className={styles.badge} style={{ opacity: 0.7 }}>Gốc: {q.de_id} - Câu {q.so_cau}</span>
+                      </div>
+                      <div className={styles.actions}>
+                        <button
+                          onClick={() => handleReplaceQuestion(index)}
+                          className={styles.replaceBtn}
+                          title="Thay câu khác cùng loại"
+                        >
+                          🔄 Thay câu
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div
+                      className={`${styles.questionContent} math-content`}
+                      dangerouslySetInnerHTML={{ __html: q.content }}
+                    />
+                    
+                    {q.options && (
+                      <div className={styles.optionsList} style={{ marginTop: '1rem' }}>
+                        {Object.entries(typeof q.options === 'string' ? JSON.parse(q.options) : q.options).map(([key, value]) => (
+                          <div key={key} className={styles.optionItem}>
+                            <span className={styles.optionLabel}>{key}.</span>
+                            <span
+                              className="math-content"
+                              dangerouslySetInnerHTML={{ __html: String(value) }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.generatorFooter}>
+              <input 
+                type="text" 
+                className={styles.examNameInput}
+                placeholder="Nhập tên mã đề (VD: de-thi-thu-2026-moi)"
+                value={examName}
+                onChange={e => setExamName(e.target.value)}
+              />
+              <button 
+                onClick={handleSaveExam}
+                className={styles.saveBtn}
+                disabled={isSavingExam || !examName.trim()}
+              >
+                {isSavingExam ? 'Đang lưu...' : '💾 Xuất đề'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
