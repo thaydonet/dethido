@@ -3,18 +3,20 @@
 
 interface ExamSet {
   de_id: string;
+  slug?: string;
   count: number;
   type: 'generated' | 'original';
 }
 
 interface HomeLayoutProps {
   examSets: ExamSet[];
+  totalExams: number;
+  totalQuestions: number;
+  currentPage: number;
+  totalPages: number;
 }
 
-export default function HomeLayout({ examSets }: HomeLayoutProps) {
-  const totalQuestions = examSets.reduce((s, e) => s + e.count, 0);
-  const generatedCount = examSets.filter(e => e.type === 'generated').length;
-
+export default function HomeLayout({ examSets, totalExams, totalQuestions, currentPage, totalPages }: HomeLayoutProps) {
   return (
     <div className="hl-root">
 
@@ -50,7 +52,7 @@ export default function HomeLayout({ examSets }: HomeLayoutProps) {
         {/* Stats bar */}
         <div className="hl-stats">
           {[
-            { icon: '📂', value: examSets.length, label: 'Đề thi bám sát cấu trúc' },
+            { icon: '📂', value: totalExams, label: 'Đề thi bám sát cấu trúc' },
             { icon: '❓', value: totalQuestions, label: 'Câu hỏi chất lượng' },
             { icon: '💡', value: '100%', label: 'Có lời giải chi tiết' },
             { icon: '∑', value: 'Trực quan', label: 'Toán học chuẩn LaTeX' },
@@ -99,7 +101,7 @@ export default function HomeLayout({ examSets }: HomeLayoutProps) {
           )}
           <div className="hl-exams-grid">
             {examSets.map(exam => (
-              <a key={exam.de_id} href={`/${encodeURIComponent(exam.de_id)}`} className="hl-exam-card">
+              <a key={exam.de_id} href={`/${exam.slug || encodeURIComponent(exam.de_id)}`} className="hl-exam-card">
                 <div className="hl-exam-icon">{exam.type === 'generated' ? '✨' : '📚'}</div>
                 <div className="hl-exam-info">
                   <h3 className="hl-exam-name">{exam.de_id}</h3>
@@ -109,6 +111,23 @@ export default function HomeLayout({ examSets }: HomeLayoutProps) {
               </a>
             ))}
           </div>
+          
+          {totalPages > 1 && (
+            <div className="hl-pagination">
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const p = i + 1;
+                return (
+                  <a
+                    key={p}
+                    href={`/?page=${p}`}
+                    className={`hl-page-btn ${currentPage === p ? 'active' : ''}`}
+                  >
+                    {p}
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -342,6 +361,40 @@ export default function HomeLayout({ examSets }: HomeLayoutProps) {
         }
         .hl-exam-card:hover .hl-exam-arr {
           transform: translateX(4px);
+        }
+
+        /* ── Pagination ── */
+        .hl-pagination {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 3rem;
+          flex-wrap: wrap;
+        }
+        .hl-page-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          background: white;
+          color: #64748b;
+          text-decoration: none;
+          font-weight: 600;
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s;
+        }
+        .hl-page-btn:hover {
+          background: #f8fafc;
+          color: #1e293b;
+          border-color: #cbd5e1;
+        }
+        .hl-page-btn.active {
+          background: #6366f1;
+          color: white;
+          border-color: #6366f1;
         }
       `}</style>
     </div>

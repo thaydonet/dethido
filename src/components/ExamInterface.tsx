@@ -20,9 +20,10 @@ interface Question {
 
 interface ExamInterfaceProps {
   questions: Question[];
+  examTitle?: string;
 }
 
-export default function ExamInterface({ questions: initialQuestions }: ExamInterfaceProps) {
+export default function ExamInterface({ questions: initialQuestions, examTitle }: ExamInterfaceProps) {
   const [displayQuestions, setDisplayQuestions] = useState(initialQuestions);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(90 * 60); // 90 minutes
@@ -200,7 +201,7 @@ export default function ExamInterface({ questions: initialQuestions }: ExamInter
               🏠 Home
             </button>
             <div>
-              <h1 className={styles.examTitle}>Đề thi thử TN THPT Môn Toán - 2026</h1>
+              <h1 className={styles.examTitle}>{examTitle || 'Đề thi thử TN THPT Môn Toán - 2026'}</h1>
               <p className={styles.examInfo}>
                 Thời gian: 90 phút | Tổng số câu: {displayQuestions.length} ({mcqCount} MCQ + {msqCount} MSQ + {saCount} SA)
               </p>

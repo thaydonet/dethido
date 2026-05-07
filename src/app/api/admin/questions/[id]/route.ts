@@ -1,24 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createClient } from '@supabase/supabase-js';
 
 async function checkAuth() {
   const cookieStore = await cookies();
-  const adminToken = cookieStore.get('admin_token');
+  const token = cookieStore.get('sb-access-token');
+  if (!token) return { isAuth: false, user: null };
   
-  if (!adminToken || adminToken.value !== process.env.ADMIN_PASSWORD) {
-    return false;
-  }
-  return true;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
+  
+  const { data, error } = await supabase.auth.getUser(token.value);
+  if (error || !data.user) return { isAuth: false, user: null };
+
+  return { isAuth: true, user: data.user };
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const isAuth = await checkAuth();
+  const { isAuth, user } = await checkAuth();
   if (!isAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (user?.user_metadata?.role === 'teacher') {
+    return NextResponse.json({ error: 'Forbidden. Chỉ admin mới được quyền xóa câu hỏi.' }, { status: 403 });
   }
 
   try {
@@ -46,9 +55,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const isAuth = await checkAuth();
+  const { isAuth, user } = await checkAuth();
   if (!isAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (user?.user_metadata?.role === 'teacher') {
+    return NextResponse.json({ error: 'Forbidden. Chỉ admin mới được quyền sửa câu hỏi.' }, { status: 403 });
   }
 
   try {

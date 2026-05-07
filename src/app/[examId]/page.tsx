@@ -4,14 +4,29 @@ import { notFound } from 'next/navigation';
 
 export const revalidate = 0;
 
+export async function generateMetadata({ params }: { params: Promise<{ examId: string }> }) {
+  const { examId } = await params;
+  const decodedId = decodeURIComponent(examId);
+
+  const { data: paper } = await supabaseAdmin
+    .from('exam_papers')
+    .select('name')
+    .or(`slug.eq.${decodedId},name.eq.${decodedId}`)
+    .single();
+
+  return {
+    title: paper?.name || 'Đề thi thử TN THPT Môn Toán - 2026',
+  };
+}
+
 async function getExamBySlug(examId: string) {
   const decodedId = decodeURIComponent(examId);
 
-  // Try to find an exam_paper with this name (slug)
+  // Try to find an exam_paper with this slug or name
   const { data: paper, error: paperError } = await supabaseAdmin
     .from('exam_papers')
-    .select('id, name, question_ids')
-    .eq('name', decodedId)
+    .select('id, name, slug, question_ids')
+    .or(`slug.eq.${decodedId},name.eq.${decodedId}`)
     .single();
 
   if (paperError || !paper || !paper.question_ids?.length) {
@@ -23,7 +38,7 @@ async function getExamBySlug(examId: string) {
       .order('so_cau', { ascending: true });
 
     if (qError || !questions?.length) return null;
-    return questions.map((q) => ({ ...q, exam_number: q.so_cau }));
+    return { questions: questions.map((q) => ({ ...q, exam_number: q.so_cau })), title: decodedId };
   }
 
   // Fetch all questions for this exam_paper, in order
@@ -43,7 +58,7 @@ async function getExamBySlug(examId: string) {
     })
     .filter(Boolean);
 
-  return ordered;
+  return { questions: ordered, title: paper.name };
 }
 
 export default async function ExamPage({
@@ -52,11 +67,11 @@ export default async function ExamPage({
   params: Promise<{ examId: string }>;
 }) {
   const { examId } = await params;
-  const questions = await getExamBySlug(examId);
+  const examData = await getExamBySlug(examId);
 
-  if (!questions || questions.length === 0) {
+  if (!examData || examData.questions.length === 0) {
     return notFound();
   }
 
-  return <ExamInterface questions={questions} />;
+  return <ExamInterface questions={examData.questions} examTitle={examData.title} />;
 }

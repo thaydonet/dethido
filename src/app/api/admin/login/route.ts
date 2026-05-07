@@ -1,31 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
-    const { password } = await request.json();
+    const { email, password, isRegister } = await request.json();
     
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     
-    if (password === adminPassword) {
-      const cookieStore = await cookies();
-      cookieStore.set('admin_token', password, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+    // Create client without persisting session to localStorage
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+      }
+    });
+
+    if (isRegister) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { role: 'teacher' }
+        }
       });
-      
-      return NextResponse.json({ success: true });
-    } else {
-      return NextResponse.json(
-        { error: 'Mật khẩu không đúng' },
-        { status: 401 }
-      );
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
+      if (data.session) {
+        const cookieStore = await cookies();
+        cookieStore.set('sb-access-token', data.session.access_token, {
+          httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7,
+        });
+        return NextResponse.json({ success: true, message: 'Đăng ký và đăng nhập thành công!' });
+      } else {
+        return NextResponse.json({ success: true, message: 'Đăng ký thành công! Vui lòng đăng nhập.' });
+      }
     }
-  } catch (error) {
+
+    // Login
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    const cookieStore = await cookies();
+    cookieStore.set('sb-access-token', data.session.access_token, {
+      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
     return NextResponse.json(
-      { error: 'Có lỗi xảy ra' },
+      { error: error.message || 'Có lỗi xảy ra' },
       { status: 500 }
     );
   }

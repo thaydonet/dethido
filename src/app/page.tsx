@@ -4,38 +4,40 @@ import HomeLayout from '@/components/HomeLayout';
 // Force dynamic rendering to always fetch the latest questions
 export const revalidate = 0;
 
-export default async function Home() {
-  // Fetch exam_papers (new generated exams)
+export default async function Home(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const searchParams = await props.searchParams;
+  const page = Number(searchParams?.page) || 1;
+  const limit = 9;
+  const start = (page - 1) * limit;
+  const end = start + limit - 1;
+
+  // Fetch all papers to calculate total stats
+  const { data: allPapers } = await supabase.from('exam_papers').select('question_ids');
+  const totalExams = allPapers?.length || 0;
+  const totalQuestions = (allPapers || []).reduce((acc, curr) => acc + (curr.question_ids?.length || 0), 0);
+  const totalPages = Math.ceil(totalExams / limit);
+
+  // Fetch paginated exam_papers
   const { data: examPapersRaw } = await supabase
     .from('exam_papers')
-    .select('id, name, question_ids, created_at')
-    .order('created_at', { ascending: false });
+    .select('id, name, slug, question_ids, created_at')
+    .order('created_at', { ascending: false })
+    .range(start, end);
 
-  // Fetch unique de_id from questions (original exams from pipeline)
-  const { data: deIdRows } = await supabase
-    .from('questions')
-    .select('de_id')
-    .order('de_id', { ascending: true });
-
-  // Build examSets from de_id (original exams only, exclude names already in exam_papers)
-  const paperNames = new Set((examPapersRaw || []).map((p: any) => p.name));
-
-  const deIdMap: Record<string, number> = {};
-  (deIdRows || []).forEach((r: any) => {
-    deIdMap[r.de_id] = (deIdMap[r.de_id] || 0) + 1;
-  });
-
-  const originalExamSets = Object.entries(deIdMap)
-    .filter(([de_id]) => !paperNames.has(de_id))
-    .map(([de_id, count]) => ({ de_id, count, type: 'original' as const }));
-
-  const examPapers = (examPapersRaw || []).map((p: any) => ({
+  const examSets = (examPapersRaw || []).map((p: any) => ({
     de_id: p.name,
+    slug: p.slug,
     count: (p.question_ids || []).length,
     type: 'generated' as const,
   }));
 
-  const allExamSets = [...examPapers, ...originalExamSets];
-
-  return <HomeLayout examSets={allExamSets} />;
+  return (
+    <HomeLayout 
+      examSets={examSets} 
+      totalExams={totalExams}
+      totalQuestions={totalQuestions}
+      currentPage={page}
+      totalPages={totalPages}
+    />
+  );
 }
