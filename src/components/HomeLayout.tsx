@@ -27,10 +27,10 @@ export default function HomeLayout({ examSets, totalExams, totalQuestions, curre
           <div className="hl-hero-content">
             <h1 className="hl-hero-title">
               Hệ thống Ôn luyện<br />
-              <span className="hl-grad">Toán học THPT 2026</span>
+              <span className="hl-grad">TN THPT Môn Toán 2026</span>
             </h1>
             <p className="hl-hero-sub">
-              Sẵn sàng cho Kỳ thi Tốt nghiệp THPT với kho đề thi và câu hỏi chất lượng cao,
+              Sẵn sàng cho Kỳ thi Tốt nghiệp THPT với kho đề thi hơn 100 đề thi và hơn 5000 câu hỏi chất lượng cao,
               được chọn lọc và có lời giải chi tiết.
             </p>
 
@@ -65,9 +65,44 @@ export default function HomeLayout({ examSets, totalExams, totalQuestions, curre
           ))}
         </div>
       </header>
+      <div className="hl-exam-list">
+        <h2 className="hl-section-title">Danh sách Đề thi</h2>
+        {examSets.length === 0 && (
+          <p style={{ textAlign: 'center', color: '#64748b' }}>Chưa có đề thi nào. Admin có thể tạo đề trong trang quản trị.</p>
+        )}
+        <div className="hl-exams-grid">
+          {examSets.map(exam => (
+            <a key={exam.de_id} href={`/${exam.slug || encodeURIComponent(exam.de_id)}`} className="hl-exam-card">
+              <div className="hl-exam-icon">{exam.type === 'generated' ? '✨' : '📚'}</div>
+              <div className="hl-exam-info">
+                <h3 className="hl-exam-name">{exam.de_id}</h3>
+                <p className="hl-exam-count">{exam.count} câu hỏi{exam.type === 'generated' ? ' · Đề tổng hợp' : ''}</p>
+              </div>
+              <div className="hl-exam-arr">→</div>
+            </a>
+          ))}
+        </div>
 
+        {totalPages > 1 && (
+          <div className="hl-pagination">
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const p = i + 1;
+              return (
+                <a
+                  key={p}
+                  href={`/?page=${p}`}
+                  className={`hl-page-btn ${currentPage === p ? 'active' : ''}`}
+                >
+                  {p}
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </div>
       {/* ══════════════ BODY ══════════════ */}
       <div className="hl-body-simplified">
+
         <div className="hl-features">
           <div className="hl-feature-card">
             <div className="hl-feature-icon">📝</div>
@@ -93,42 +128,14 @@ export default function HomeLayout({ examSets, totalExams, totalQuestions, curre
             </p>
           </div>
         </div>
-
-        <div className="hl-exam-list">
-          <h2 className="hl-section-title">Danh sách Đề thi</h2>
-          {examSets.length === 0 && (
-            <p style={{ textAlign: 'center', color: '#64748b' }}>Chưa có đề thi nào. Admin có thể tạo đề trong trang quản trị.</p>
-          )}
-          <div className="hl-exams-grid">
-            {examSets.map(exam => (
-              <a key={exam.de_id} href={`/${exam.slug || encodeURIComponent(exam.de_id)}`} className="hl-exam-card">
-                <div className="hl-exam-icon">{exam.type === 'generated' ? '✨' : '📚'}</div>
-                <div className="hl-exam-info">
-                  <h3 className="hl-exam-name">{exam.de_id}</h3>
-                  <p className="hl-exam-count">{exam.count} câu hỏi{exam.type === 'generated' ? ' · Đề tổng hợp' : ''}</p>
-                </div>
-                <div className="hl-exam-arr">→</div>
-              </a>
-            ))}
-          </div>
-          
-          {totalPages > 1 && (
-            <div className="hl-pagination">
-              {Array.from({ length: totalPages }).map((_, i) => {
-                const p = i + 1;
-                return (
-                  <a
-                    key={p}
-                    href={`/?page=${p}`}
-                    className={`hl-page-btn ${currentPage === p ? 'active' : ''}`}
-                  >
-                    {p}
-                  </a>
-                );
-              })}
-            </div>
-          )}
+        <div className="hl-feature-card">
+          <h3 className="hl-feature-title">🌐 Hướng dẫn cho Giáo viên</h3>
+          <p>
+            Giáo viên có thể tạo đề thi online, Tải đề thi về máy dưới dạng file Word, PDF hoặc HTML để sử dụng trong quá trình giảng dạy hoặc ôn luyện. </p>
+          <p>  Để vào phần này vui lòng truy cập : <a href="http://thi.booktoan.com/admin/" target="_blank" rel="noopener noreferrer">https://thi.booktoan.com/admin/</a> - Thầy/Cô đăng ký/đăng nhập để sử dụng chức năng.
+          </p>
         </div>
+
       </div>
 
       {/* ══════════════ STYLES ══════════════ */}

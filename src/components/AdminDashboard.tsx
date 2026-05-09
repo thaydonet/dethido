@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './AdminDashboard.module.css';
 import 'katex/dist/katex.min.css';
@@ -36,6 +36,7 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
   const [showSolution, setShowSolution] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Edit state
   const [editingQ, setEditingQ] = useState<Question | null>(null);
@@ -132,6 +133,182 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
       if (opts.option_a && opts.option_b) return 'mcq';
     }
     return 'sa';
+  };
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const selectedQuestions = useMemo(
+    () => questions.filter(q => selectedIds.has(q.id)),
+    [questions, selectedIds]
+  );
+
+  const selectionStats = useMemo(() => ({
+    total: selectedQuestions.length,
+    mcq: selectedQuestions.filter(q => getQuestionType(q) === 'mcq').length,
+    msq: selectedQuestions.filter(q => getQuestionType(q) === 'msq').length,
+    sa: selectedQuestions.filter(q => getQuestionType(q) === 'sa').length,
+  }), [selectedQuestions]);
+
+  const handleGenerateOnlineFromSelected = () => {
+    const sel = selectedQuestions;
+    if (sel.length === 0) { handleGenerateExam(); return; }
+    setGeneratedExam(sel);
+    setIsGenerating(true);
+  };
+
+  const sortForExam = (qs: Question[]) => {
+    const order: Record<string, number> = { mcq: 0, msq: 1, sa: 2 };
+    return [...qs].sort((a, b) => (order[getQuestionType(a)] ?? 0) - (order[getQuestionType(b)] ?? 0));
+  };
+
+  const buildStyledHTML = (qs: Question[], withAnswers: boolean, examTitle = 'ĐỀ KIỂM TRA') => {
+    const sorted = sortForExam(qs);
+    const sections: { type: string; label: string; color: string; questions: { q: Question; num: number }[] }[] = [
+      { type: 'mcq', label: 'PHẦN I. TRẮC NGHIỆM NHIỀU LỰA CHỌN', color: '#1a5276', questions: [] },
+      { type: 'msq', label: 'PHẦN II. TRẮC NGHIỆM ĐÚNG – SAI', color: '#117a65', questions: [] },
+      { type: 'sa',  label: 'PHẦN III. TRẢ LỜI NGẮN', color: '#784212', questions: [] },
+    ];
+    let num = 0;
+    sorted.forEach(q => {
+      const t = getQuestionType(q);
+      const sec = sections.find(s => s.type === t);
+      if (sec) sec.questions.push({ q, num: ++num });
+    });
+
+    const mcqCount = sections[0].questions.length;
+    const msqCount = sections[1].questions.length;
+    const saCount  = sections[2].questions.length;
+
+    const renderSection = (sec: typeof sections[0]) => {
+      if (!sec.questions.length) return '';
+      const qs_html = sec.questions.map(({ q, num: n }) => {
+        const opts = q.options ? (typeof q.options === 'string' ? JSON.parse(q.options) : q.options) : null;
+        let optHtml = '';
+        if (sec.type === 'mcq' && opts) {
+          const letters = ['A','B','C','D'];
+          optHtml = `<table class='opt-table'><tr>` +
+            letters.map(l => {
+              const val = opts[`option_${l.toLowerCase()}`];
+              if (!val) return '';
+              const isCorrect = withAnswers && q.answer && q.answer.includes(l);
+              return `<td class='opt-cell${isCorrect ? ' correct-cell' : ''}'><b>${l}.</b> ${val}</td>`;
+            }).join('') + `</tr></table>`;
+        } else if (sec.type === 'msq' && opts) {
+          optHtml = ['a','b','c','d'].map(l => {
+            const val = opts[`option_${l}`];
+            if (!val) return '';
+            const isCorrect = withAnswers && q.answer && q.answer.toLowerCase().split(',').includes(l);
+            return `<div class='msq-row'><span class='msq-label'>${l.toUpperCase()})</span><span class='msq-content'>${val}</span>` +
+              `<span class='msq-tf'><span class='tf-box${withAnswers && isCorrect ? ' tf-true' : ''}'>Đúng</span>` +
+              `<span class='tf-box${withAnswers && !isCorrect ? ' tf-false' : ''}'>Sai</span></span></div>`;
+          }).join('');
+        }
+        const ansBlock = withAnswers && sec.type !== 'msq'
+          ? `<div class='ans-block'>Đáp án: <b>${q.answer || ''}</b></div>` +
+            (q.explanation || q.metadata?.explanation || q.metadata?.loi_giai
+              ? `<div class='expl-block'><b>Lời giải:</b> ${q.explanation || q.metadata?.explanation || q.metadata?.loi_giai}</div>`
+              : '')
+          : sec.type === 'sa' && !withAnswers
+          ? `<div class='sa-box'>Đáp số: ___________</div>` : '';
+        return `<div class='question'><p class='qnum'>Câu ${n}${q.image_url ? `<img src='${q.image_url}' class='qimg'/>` : ''}</p><div class='qcontent'>${q.content}</div>${optHtml}${ansBlock}</div>`;
+      }).join('');
+      return `<div class='section'><div class='section-header' style='background:${sec.color}'>${sec.label}</div><div class='section-body'>${qs_html}</div></div>`;
+    };
+
+    const css = `
+body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:20mm 15mm;color:#000;font-size:13pt;background:#fff}
+.doc-header{text-align:center;margin-bottom:8mm;border-bottom:3px double #000;padding-bottom:5mm}
+.doc-header .school{font-size:11pt;font-weight:bold;text-transform:uppercase}
+.doc-header .exam-title{font-size:16pt;font-weight:bold;text-transform:uppercase;margin:4mm 0 2mm}
+.doc-header .exam-sub{font-size:12pt;font-weight:bold}
+.doc-header .info{font-size:11pt;margin-top:3mm}
+.section{margin:6mm 0}
+.section-header{color:#fff;font-weight:bold;font-size:13pt;padding:4mm 6mm;border-radius:3px;text-transform:uppercase;letter-spacing:.5px}
+.section-body{padding:4mm 0}
+.question{margin:5mm 0;padding:4mm 0;border-bottom:1px dashed #ccc}
+.qnum{font-weight:bold;font-size:13pt;margin:0 0 2mm}
+.qcontent{margin:2mm 0 3mm;line-height:1.7}
+.qimg{max-width:100%;height:auto;display:block;margin:3mm auto}
+.opt-table{width:100%;border-collapse:collapse;margin:2mm 0}
+.opt-cell{width:50%;padding:2mm 3mm;vertical-align:top;line-height:1.6}
+.correct-cell{background:#d5f5e3;font-weight:bold}
+.msq-row{display:flex;align-items:flex-start;gap:6px;margin:2mm 0;line-height:1.6}
+.msq-label{font-weight:bold;min-width:22px}
+.msq-content{flex:1}
+.msq-tf{display:flex;gap:4px;flex-shrink:0;margin-left:6px}
+.tf-box{border:1px solid #000;padding:1px 8px;font-size:11pt;min-width:42px;text-align:center}
+.tf-true{background:#d5f5e3;font-weight:bold}
+.tf-false{background:#fadbd8;font-weight:bold}
+.ans-block{margin:3mm 0;padding:2mm 4mm;background:#d5f5e3;border-left:4px solid #1e8449;font-size:12pt}
+.expl-block{margin:2mm 0;padding:3mm 4mm;background:#eaf4fb;border-left:4px solid #2e86c1;font-size:11.5pt;line-height:1.7}
+.sa-box{margin:3mm 0;border-bottom:1px solid #000;height:8mm}
+.footer{text-align:center;margin-top:10mm;font-size:10pt;color:#666;border-top:1px solid #ccc;padding-top:4mm}
+@media print{body{margin:0;padding:15mm 12mm}.section-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    `.trim();
+
+    const header = `<div class='doc-header'>
+      <div class='school'>BỘ GIÁO DỤC VÀ ĐÀO TẠO</div>
+      <div class='exam-title'>${examTitle}</div>
+      <div class='exam-sub'>Môn: Toán — Lớp 12</div>
+      <div class='info'>Thời gian làm bài: 90 phút (không kể thời gian giao đề)<br/>Tổng số câu: ${mcqCount + msqCount + saCount} (${mcqCount} MCQ + ${msqCount} MSQ + ${saCount} SA)</div>
+    </div>`;
+
+    const body = sections.map(renderSection).join('');
+    const footer = `<div class='footer'>— HẾT —</div>`;
+    return `<!DOCTYPE html><html lang='vi'><head><meta charset='UTF-8'/><title>${examTitle}</title><style>${css}</style></head><body>${header}${body}${footer}</body></html>`;
+  };
+
+  const buildExcelCSV = (qs: Question[]) => {
+    const sorted = sortForExam(qs);
+    const bom = '\uFEFF';
+    const header = 'Số câu,Đáp án,Loại\r\n';
+    const rows = sorted.map((q, i) => {
+      const type = getQuestionType(q);
+      return `${i + 1},"${(q.answer || '').replace(/"/g, '""')}",${type.toUpperCase()}`;
+    }).join('\r\n');
+    return bom + header + rows;
+  };
+
+  const buildWordDoc = (htmlContent: string) =>
+    `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='UTF-8'><meta name=ProgId content=Word.Document>
+    <meta name=Generator content='Microsoft Word 15'><meta name=Originator content='Microsoft Word 15'>
+    <style>body{font-family:'Times New Roman';font-size:13pt}table{width:100%}</style></head>
+    <body>${htmlContent}</body></html>`;
+
+  const handleExportOffline = async (qsParam?: Question[] | any) => {
+    // If called directly from an onClick event, qsParam might be a React SyntheticEvent.
+    // We check if it's an array to ensure it's actually the questions array.
+    const isArray = Array.isArray(qsParam);
+    const qs = isArray && qsParam.length > 0 ? qsParam : (selectedQuestions.length > 0 ? selectedQuestions : []);
+    if (qs.length === 0) { alert('Chưa có câu hỏi nào để xuất!'); return; }
+
+    const JSZip = (await import('jszip')).default;
+    const zip = new JSZip();
+
+    const examHtml   = buildStyledHTML(qs, false, 'ĐỀ KIỂM TRA TOÁN 12');
+    const answerHtml = buildStyledHTML(qs, true,  'ĐỀ KIỂM TRA TOÁN 12 – ĐÁP ÁN VÀ LỜI GIẢI');
+    const csvContent = buildExcelCSV(qs);
+
+    zip.file('de-thi.html',      examHtml,              { binary: false });
+    zip.file('de-thi.doc',       buildWordDoc(examHtml), { binary: false });
+    zip.file('dap-an-loi-giai.doc', buildWordDoc(answerHtml), { binary: false });
+    zip.file('dap-an.csv',       csvContent,            { binary: false });
+
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'de-thi-offline.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   const handleGenerateExam = () => {
@@ -299,7 +476,7 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
       </div>
 
       <div className={styles.results}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
           <p className={styles.resultCount}>
             Hiển thị {filteredQuestions.length} / {stats.total} câu hỏi
             {totalPages > 1 && ` — Trang ${currentPage}/${totalPages}`}
@@ -312,9 +489,16 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
 
       <div className={styles.questionList}>
         {pagedQuestions.map(q => (
-          <div key={q.id} className={styles.questionCard}>
+          <div key={q.id} className={`${styles.questionCard} ${selectedIds.has(q.id) ? styles.questionCardSelected : ''}`}>
             <div className={styles.questionHeader}>
               <div className={styles.questionMeta}>
+                <input
+                  type='checkbox'
+                  className={styles.questionCheckbox}
+                  checked={selectedIds.has(q.id)}
+                  onChange={() => toggleSelect(q.id)}
+                  title='Chọn câu hỏi này'
+                />
                 <span className={styles.badge}>{q.de_id}</span>
                 <span className={styles.badge}>Câu {q.so_cau}</span>
                 <span className={`${styles.badge} ${styles[getQuestionType(q)]}`}>{getQuestionType(q).toUpperCase()}</span>
@@ -510,10 +694,36 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
             </div>
             <div className={styles.generatorFooter}>
               <input type="text" className={styles.examNameInput} placeholder="Nhập tên mã đề (VD: de-thi-thu-2026-moi)" value={examName} onChange={e => setExamName(e.target.value)} />
-              <button onClick={handleSaveExam} className={styles.saveBtn} disabled={isSavingExam || !examName.trim()}>
-                {isSavingExam ? 'Đang lưu...' : '💾 Xuất đề'}
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={handleSaveExam} className={styles.onlineBtn} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }} disabled={isSavingExam || !examName.trim()}>
+                  {isSavingExam ? 'Đang lưu...' : '🌐 Xuất Online'}
+                </button>
+                <button onClick={() => handleExportOffline(generatedExam)} className={styles.offlineBtn} style={{ padding: '0.5rem 1rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }} disabled={!generatedExam?.length}>
+                  📥 Xuất Offline
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky bottom selection bar */}
+      {selectionStats.total > 0 && (
+        <div className={styles.selectionBar}>
+          <div className={styles.selectionInfo}>
+            <span className={styles.selectionTotal}>✅ Đã chọn: <strong>{selectionStats.total}</strong> câu</span>
+            <span className={`${styles.selectionChip} ${styles.selectionChipMcq}`}>MCQ: <strong>{selectionStats.mcq}</strong></span>
+            <span className={`${styles.selectionChip} ${styles.selectionChipMsq}`}>MSQ: <strong>{selectionStats.msq}</strong></span>
+            <span className={`${styles.selectionChip} ${styles.selectionChipSa}`}>SA: <strong>{selectionStats.sa}</strong></span>
+          </div>
+          <div className={styles.selectionActions}>
+            <button onClick={clearSelection} className={styles.clearSelBtn}>✕ Bỏ chọn</button>
+            <button onClick={handleGenerateOnlineFromSelected} className={styles.onlineBtn}>
+              🌐 Tạo đề Online
+            </button>
+            <button onClick={handleExportOffline} className={styles.offlineBtn}>
+              📥 Tạo đề Offline (HTML + Word)
+            </button>
           </div>
         </div>
       )}

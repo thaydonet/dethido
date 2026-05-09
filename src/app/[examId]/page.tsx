@@ -1,10 +1,11 @@
+import { Metadata } from 'next';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import ExamInterface from '@/components/ExamInterface';
 import { notFound } from 'next/navigation';
 
 export const revalidate = 0;
 
-export async function generateMetadata({ params }: { params: Promise<{ examId: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ examId: string }> }): Promise<Metadata> {
   const { examId } = await params;
   const decodedId = decodeURIComponent(examId);
 
@@ -14,8 +15,24 @@ export async function generateMetadata({ params }: { params: Promise<{ examId: s
     .or(`slug.eq.${decodedId},name.eq.${decodedId}`)
     .single();
 
+  const title = paper?.name || 'Đề thi thử TN THPT Môn Toán - 2026';
+  const description = `Làm bài thi online: ${title}. Hệ thống lưu trữ và phân loại câu hỏi toán học THPT tự động bằng AI.`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://thi.booktoan.com';
+
   return {
-    title: paper?.name || 'Đề thi thử TN THPT Môn Toán - 2026',
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      url: `${siteUrl}/${examId}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
   };
 }
 

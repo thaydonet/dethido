@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { renderLatexContent } from '@/lib/latex-renderer';
 import styles from './ExamInterface.module.css';
@@ -42,11 +42,7 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
     const mcqs = shuffle(initialQuestions.filter(q => (q.metadata?.type || 'mcq') === 'mcq'));
     const msqs = shuffle(initialQuestions.filter(q => q.metadata?.type === 'msq'));
     const sas = shuffle(initialQuestions.filter(q => q.metadata?.type === 'sa'));
-    const shuffled = [
-      ...mcqs,
-      ...msqs,
-      ...sas,
-    ].map((q, i) => ({ ...q, exam_number: i + 1 }));
+    const shuffled = [...mcqs, ...msqs, ...sas].map((q, i) => ({ ...q, exam_number: i + 1 }));
     setDisplayQuestions(shuffled);
     setAnswers({});
     setTimeLeft(90 * 60);
@@ -54,9 +50,20 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Sort helper: MCQ → MSQ → SA
+  const sortByType = (qs: Question[]): Question[] => {
+    const order: Record<string, number> = { mcq: 0, msq: 1, sa: 2 };
+    const sorted = [...qs].sort((a, b) => {
+      const ta = a.metadata?.type || 'mcq';
+      const tb = b.metadata?.type || 'mcq';
+      return (order[ta] ?? 0) - (order[tb] ?? 0);
+    });
+    return sorted.map((q, i) => ({ ...q, exam_number: i + 1 }));
+  };
+
   // Reset state when component mounts with new questions
   useEffect(() => {
-    setDisplayQuestions(initialQuestions);
+    setDisplayQuestions(sortByType(initialQuestions));
     setAnswers({});
     setTimeLeft(90 * 60);
     setIsSubmitted(false);
@@ -231,16 +238,31 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
           </div>
         </div>
 
-        {/* All Questions */}
+        {/* All Questions grouped by section */}
         <div className={styles.questionsList}>
-          {displayQuestions.map((q) => {
+          {(() => {
+            const sectionLabels: Record<string, string> = {
+              mcq: 'Phần I: Trắc nghiệm (MCQ)',
+              msq: 'Phần II: Đúng - sai (MSQ)',
+              sa: 'Phần III: Trả lời ngắn',
+            };
+            let lastType = '';
+            return displayQuestions.map((q) => {
             const type = getQuestionType(q);
             const userAnswer = answers[q.exam_number];
             const isCorrect = isSubmitted && userAnswer === q.answer;
             const isWrong = isSubmitted && userAnswer && userAnswer !== q.answer;
+            const showHeading = type !== lastType;
+            if (showHeading) lastType = type;
 
             return (
-              <div key={q.id} className={`${styles.questionBlock} ${styles[getQuestionSection(q)]}`}>
+              <Fragment key={q.id}>
+                {showHeading && (
+                  <div className={styles.sectionHeading}>
+                    {sectionLabels[type] || type.toUpperCase()}
+                  </div>
+                )}
+                <div className={`${styles.questionBlock} ${styles[getQuestionSection(q)]}`}>
                 <div className={styles.questionHeader}>
                   <span className={styles.questionNumber}>Câu {q.exam_number}:</span>
                   {isSubmitted && (
@@ -425,8 +447,10 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
                   );
                 })()}
               </div>
+              </Fragment>
             );
-          })}
+          });
+          })()}
         </div>
 
         {/* Submit Button */}

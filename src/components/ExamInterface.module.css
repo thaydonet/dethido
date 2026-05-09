@@ -758,3 +758,17 @@
   background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
   color: white;
 }
+
+/* Bold red section divider headings between question groups */
+.sectionHeading {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #c53030;
+  padding: 1rem 1.5rem;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+  border-left: 5px solid #e53e3e;
+  border-radius: 10px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 6px rgba(229, 62, 62, 0.12);
+}
