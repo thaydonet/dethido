@@ -58,6 +58,9 @@ async function getExamBySlug(examId: string) {
     return { questions: questions.map((q) => ({ ...q, exam_number: q.so_cau })), title: decodedId };
   }
 
+  // Increment view count via RPC silently (don't block on it)
+  supabaseAdmin.rpc('increment_view_count', { paper_id: paper.id }).then(() => {});
+
   // Fetch all questions for this exam_paper, in order
   const { data: questions, error: qError } = await supabaseAdmin
     .from('questions')
