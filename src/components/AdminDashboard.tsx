@@ -48,14 +48,17 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
   const [generatedExam, setGeneratedExam] = useState<Question[] | null>(null);
   const [examName, setExamName] = useState('');
   const [isSavingExam, setIsSavingExam] = useState(false);
-  const [examPapers, setExamPapers] = useState<{ id: string; name: string; slug?: string; question_ids: string[] }[]>([]);
-
+  const [examPapers, setExamPapers] = useState<{ id: string; name: string; slug?: string; question_ids: string[]; created_by_email?: string; view_count?: number }[]>([]);
+  const [totalTeachers, setTotalTeachers] = useState<number>(0);
   const router = useRouter();
 
   useEffect(() => {
     fetch('/api/admin/exams')
       .then(r => r.json())
-      .then(d => setExamPapers(d.data || []))
+      .then(d => {
+        setExamPapers(d.data || []);
+        if (d.totalTeachers !== undefined) setTotalTeachers(d.totalTeachers);
+      })
       .catch(() => {});
   }, []);
 
@@ -425,6 +428,7 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
           { icon: '📝', value: stats.typeCount.mcq || 0, label: 'Trắc nghiệm (MCQ)' },
           { icon: '✅', value: stats.typeCount.msq || 0, label: 'Đúng - sai (MSQ)' },
           { icon: '✏️', value: stats.typeCount.sa || 0, label: 'Trả lời ngắn (SA)' },
+          ...(isAdmin ? [{ icon: '👨‍🏫', value: totalTeachers, label: 'Giáo viên đăng ký' }] : []),
         ].map((s, i) => (
           <div key={i} className={styles.statCard}>
             <div className={styles.statIcon}>{s.icon}</div>
@@ -448,7 +452,11 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
                   <span style={{ fontSize: '1.5rem' }}>📋</span>
                   <div>
                     <div style={{ fontWeight: 700, color: '#1a202c' }}>{paper.name}</div>
-                    <div style={{ fontSize: '0.85rem', color: '#718096' }}>{(paper.question_ids || []).length} câu hỏi</div>
+                    <div style={{ fontSize: '0.85rem', color: '#718096', marginTop: '0.25rem' }}>
+                      {(paper.question_ids || []).length} câu hỏi 
+                      {paper.created_by_email && ` • 👨‍🏫 ${paper.created_by_email}`}
+                      {paper.view_count !== undefined && ` • 👁️ ${paper.view_count} lượt xem`}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>

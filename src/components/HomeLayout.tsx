@@ -6,6 +6,8 @@ interface ExamSet {
   slug?: string;
   count: number;
   type: 'generated' | 'original';
+  created_by_email?: string;
+  view_count?: number;
 }
 
 interface HomeLayoutProps {
@@ -76,7 +78,11 @@ export default function HomeLayout({ examSets, totalExams, totalQuestions, curre
               <div className="hl-exam-icon">{exam.type === 'generated' ? '✨' : '📚'}</div>
               <div className="hl-exam-info">
                 <h3 className="hl-exam-name">{exam.de_id}</h3>
-                <p className="hl-exam-count">{exam.count} câu hỏi{exam.type === 'generated' ? ' · Đề tổng hợp' : ''}</p>
+                <p className="hl-exam-count">
+                  {exam.count} câu hỏi{exam.type === 'generated' ? ' · Đề tổng hợp' : ''}
+                  {exam.created_by_email && exam.created_by_email !== 'N/A' && <span style={{ display: 'block', marginTop: '4px' }}>👨‍🏫 {exam.created_by_email}</span>}
+                  {exam.view_count !== undefined && <span style={{ display: 'block', marginTop: '2px' }}>👁️ {exam.view_count} lượt xem</span>}
+                </p>
               </div>
               <div className="hl-exam-arr">→</div>
             </a>
