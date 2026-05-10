@@ -20,16 +20,28 @@ export default async function Home(props: { searchParams: Promise<{ [key: string
   // Fetch paginated exam_papers
   const { data: examPapersRaw } = await supabase
     .from('exam_papers')
-    .select('id, name, slug, question_ids, created_at')
+    .select('id, name, slug, question_ids, created_at, created_by, view_count')
     .order('created_at', { ascending: false })
     .range(start, end);
 
-  const examSets = (examPapersRaw || []).map((p: any) => ({
-    de_id: p.name,
-    slug: p.slug,
-    count: (p.question_ids || []).length,
-    type: 'generated' as const,
-  }));
+  // Fetch users for mapping emails
+  let usersList: any[] = [];
+  const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+  if (!usersError && usersData?.users) {
+    usersList = usersData.users;
+  }
+
+  const examSets = (examPapersRaw || []).map((p: any) => {
+    const creator = usersList.find(u => u.id === p.created_by);
+    return {
+      de_id: p.name,
+      slug: p.slug,
+      count: (p.question_ids || []).length,
+      type: 'generated' as const,
+      created_by_email: creator ? creator.email : 'N/A',
+      view_count: p.view_count || 0
+    };
+  });
 
   return (
     <HomeLayout 
