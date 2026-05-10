@@ -40,7 +40,7 @@ export default function HomeLayout({ examSets, totalExams, totalQuestions, curre
               <span className="hl-cta-arr">→</span>
             </a>
             <p className="hl-hero-sub">
-              (Mỗi lần bạn làm đề thi sẽ thay đổi câu hỏi ngẫu nhiên).
+              (Mỗi lần bạn làm đề thi sẽ thay đổi câu hỏi ngẫu nhiên - Số đề ♾ - số câu hỏi ♾).
             </p>
           </div>
 
@@ -52,10 +52,10 @@ export default function HomeLayout({ examSets, totalExams, totalQuestions, curre
         {/* Stats bar */}
         <div className="hl-stats">
           {[
-            { icon: '📂', value: totalExams, label: 'Đề thi bám sát cấu trúc' },
-            { icon: '❓', value: totalQuestions, label: 'Câu hỏi chất lượng' },
+            { icon: '📚', value: '45', label: 'Đề thi bám sát cấu trúc' },
+            { icon: '∑', value: '980', label: 'Câu hỏi chất lượng' },
             { icon: '💡', value: '100%', label: 'Có lời giải chi tiết' },
-            { icon: '∑', value: 'Trực quan', label: 'Toán học chuẩn LaTeX' },
+            { icon: '❓', value: '♾️', label: 'Đa dạng dạng Toán' },
           ].map(s => (
             <div key={s.label} className="hl-stat">
               <span className="hl-stat-icon">{s.icon}</span>
@@ -66,7 +66,7 @@ export default function HomeLayout({ examSets, totalExams, totalQuestions, curre
         </div>
       </header>
       <div className="hl-exam-list">
-        <h2 className="hl-section-title">Danh sách Đề thi</h2>
+        <h2 className="hl-section-title">Danh sách Đề thi do Giáo viên tạo ra ({totalExams} Đề thi)</h2>
         {examSets.length === 0 && (
           <p style={{ textAlign: 'center', color: '#64748b' }}>Chưa có đề thi nào. Admin có thể tạo đề trong trang quản trị.</p>
         )}
