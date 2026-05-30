@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await query;
 
-    let examPapers = data || [];
+    let examPapers: any[] = data || [];
 
     if (error) {
       // Fallback if view_count or created_by doesn't exist yet
