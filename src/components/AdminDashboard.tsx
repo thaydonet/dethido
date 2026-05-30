@@ -31,6 +31,8 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
   const [questions, setQuestions] = useState(initialQuestions);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterDe, setFilterDe] = useState<string>('all');
+  const [filterClassification, setFilterClassification] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'questions'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showSolution, setShowSolution] = useState<Record<string, boolean>>({});
@@ -50,6 +52,15 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
   const [isSavingExam, setIsSavingExam] = useState(false);
   const [examPapers, setExamPapers] = useState<{ id: string; name: string; slug?: string; question_ids: string[]; created_by_email?: string; view_count?: number }[]>([]);
   const [totalTeachers, setTotalTeachers] = useState<number>(0);
+
+  // Edit exam paper state
+  const [editingPaper, setEditingPaper] = useState<{ id: string; name: string; slug?: string; question_ids: string[]; created_by_email?: string; view_count?: number } | null>(null);
+  const [editPaperName, setEditPaperName] = useState('');
+  const [editPaperQuestionIds, setEditPaperQuestionIds] = useState<string[]>([]);
+  const [editPaperQuestions, setEditPaperQuestions] = useState<Question[]>([]);
+  const [isSavingPaper, setIsSavingPaper] = useState(false);
+  const [isLoadingPaperQs, setIsLoadingPaperQs] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -364,6 +375,53 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
     else alert('Có lỗi khi xóa đề');
   };
 
+  const openEditPaper = async (paper: typeof examPapers[0]) => {
+    setEditingPaper(paper);
+    setEditPaperName(paper.name);
+    setEditPaperQuestionIds(paper.question_ids || []);
+    setEditPaperQuestions([]);
+    setIsLoadingPaperQs(true);
+    try {
+      const res = await fetch(`/api/admin/exams/${paper.id}`);
+      const data = await res.json();
+      if (res.ok && data.questions) {
+        setEditPaperQuestions(data.questions);
+      }
+    } catch {}
+    finally { setIsLoadingPaperQs(false); }
+  };
+
+  const handleRemoveQuestionFromPaper = (qId: string) => {
+    setEditPaperQuestionIds(prev => prev.filter(id => id !== qId));
+    setEditPaperQuestions(prev => prev.filter(q => q.id !== qId));
+  };
+
+  const handleSavePaper = async () => {
+    if (!editingPaper) return;
+    if (!editPaperName.trim()) { alert('Vui lòng nhập tên đề!'); return; }
+    setIsSavingPaper(true);
+    try {
+      const res = await fetch(`/api/admin/exams/${editingPaper.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editPaperName.trim(), question_ids: editPaperQuestionIds }),
+      });
+      if (res.ok) {
+        setExamPapers(prev => prev.map(p =>
+          p.id === editingPaper.id
+            ? { ...p, name: editPaperName.trim(), question_ids: editPaperQuestionIds }
+            : p
+        ));
+        setEditingPaper(null);
+        alert('Cập nhật đề thành công!');
+      } else {
+        const d = await res.json();
+        alert('Lỗi: ' + d.error);
+      }
+    } catch { alert('Có lỗi xảy ra'); }
+    finally { setIsSavingPaper(false); }
+  };
+
   const stats = useMemo(() => {
     const typeCount: Record<string, number> = {};
     const deCount: Record<string, number> = {};
@@ -381,17 +439,28 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
       const type = getQuestionType(q);
       const matchType = filterType === 'all' || type === filterType;
       const matchDe = filterDe === 'all' || q.de_id === filterDe;
+      const matchClassification = filterClassification === 'all' || q.metadata?.dang_toan === filterClassification;
       const matchSearch = searchTerm === '' ||
         q.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.de_id.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchType && matchDe && matchSearch;
+        q.de_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (q.metadata?.dang_toan || '').toLowerCase().includes(searchTerm.toLowerCase());
+      return matchType && matchDe && matchSearch && matchClassification;
     });
-  }, [questions, filterType, filterDe, searchTerm]);
+  }, [questions, filterType, filterDe, filterClassification, searchTerm]);
 
   const totalPages = Math.ceil(filteredQuestions.length / PAGE_SIZE);
   const pagedQuestions = filteredQuestions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const uniqueDe = useMemo(() => Array.from(new Set(questions.map(q => q.de_id))).sort(), [questions]);
+
+  const uniqueClassifications = useMemo(() => {
+    const set = new Set<string>();
+    questions.forEach(q => {
+      const c = q.metadata?.dang_toan;
+      if (c) set.add(c);
+    });
+    return Array.from(set).sort();
+  }, [questions]);
 
   useEffect(() => {
     setMounted(true);
@@ -422,54 +491,78 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
         <button onClick={handleLogout} className={styles.logoutBtn}>Đăng xuất</button>
       </header>
 
-      <div className={styles.statsGrid}>
-        {[
-          { icon: '📊', value: stats.total, label: 'Tổng câu hỏi' },
-          { icon: '📝', value: stats.typeCount.mcq || 0, label: 'Trắc nghiệm (MCQ)' },
-          { icon: '✅', value: stats.typeCount.msq || 0, label: 'Đúng - sai (MSQ)' },
-          { icon: '✏️', value: stats.typeCount.sa || 0, label: 'Trả lời ngắn (SA)' },
-          ...(isAdmin ? [{ icon: '👨‍🏫', value: totalTeachers, label: 'Giáo viên đăng ký' }] : []),
-        ].map((s, i) => (
-          <div key={i} className={styles.statCard}>
-            <div className={styles.statIcon}>{s.icon}</div>
-            <div>
-              <div className={styles.statValue}>{s.value}</div>
-              <div className={styles.statLabel}>{s.label}</div>
-            </div>
-          </div>
-        ))}
+      {/* Tabs navigation */}
+      <div className={styles.tabsContainer}>
+        <button 
+          className={`${styles.tabButton} ${activeTab === 'dashboard' ? styles.tabButtonActive : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          📊 Tổng quan & Đề thi đã tạo
+        </button>
+        <button 
+          className={`${styles.tabButton} ${activeTab === 'questions' ? styles.tabButtonActive : ''}`}
+          onClick={() => setActiveTab('questions')}
+        >
+          📚 Liệt kê câu hỏi & Tạo đề
+        </button>
       </div>
 
-      {examPapers.length > 0 && (
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1a202c', marginBottom: '1rem' }}>
-            ✨ Đề thi đã tạo ({examPapers.length})
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {examPapers.map(paper => (
-              <div key={paper.id} style={{ background: 'white', borderRadius: '10px', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>📋</span>
-                  <div>
-                    <div style={{ fontWeight: 700, color: '#1a202c' }}>{paper.name}</div>
-                    <div style={{ fontSize: '0.85rem', color: '#718096', marginTop: '0.25rem' }}>
-                      {(paper.question_ids || []).length} câu hỏi 
-                      {paper.created_by_email && ` • 👨‍🏫 ${paper.created_by_email}`}
-                      {paper.view_count !== undefined && ` • 👁️ ${paper.view_count} lượt xem`}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <a href={`/${paper.slug || encodeURIComponent(paper.name)}`} target="_blank" style={{ padding: '0.5rem 1rem', background: '#667eea', color: 'white', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>🔗 Xem đề</a>
-                  <button onClick={() => handleDeleteExamPaper(paper.id, paper.name)} style={{ padding: '0.5rem 0.75rem', background: '#fed7d7', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '1rem' }} title="Xóa đề">🗑️</button>
+      {activeTab === 'dashboard' && (
+        <>
+          <div className={styles.statsGrid}>
+            {[
+              { icon: '📊', value: stats.total, label: 'Tổng câu hỏi' },
+              { icon: '📝', value: stats.typeCount.mcq || 0, label: 'Trắc nghiệm (MCQ)' },
+              { icon: '✅', value: stats.typeCount.msq || 0, label: 'Đúng - sai (MSQ)' },
+              { icon: '✏️', value: stats.typeCount.sa || 0, label: 'Trả lời ngắn (SA)' },
+              { icon: '📋', value: examPapers.length, label: 'Đề thi đã tạo' },
+              ...(isAdmin ? [{ icon: '👨‍🏫', value: totalTeachers, label: 'Giáo viên đăng ký' }] : []),
+            ].map((s, i) => (
+              <div key={i} className={styles.statCard}>
+                <div className={styles.statIcon}>{s.icon}</div>
+                <div>
+                  <div className={styles.statValue}>{s.value}</div>
+                  <div className={styles.statLabel}>{s.label}</div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+
+          {examPapers.length > 0 && (
+            <div style={{ marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1a202c', marginBottom: '1rem' }}>
+                ✨ Đề thi đã tạo ({examPapers.length})
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {examPapers.map(paper => (
+                  <div key={paper.id} style={{ background: 'white', borderRadius: '10px', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <span style={{ fontSize: '1.5rem' }}>📋</span>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#1a202c' }}>{paper.name}</div>
+                        <div style={{ fontSize: '0.85rem', color: '#718096', marginTop: '0.25rem' }}>
+                          {(paper.question_ids || []).length} câu hỏi 
+                          {paper.created_by_email && ` • 👨‍🏫 ${paper.created_by_email}`}
+                          {paper.view_count !== undefined && ` • 👁️ ${paper.view_count} lượt xem`}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <a href={`/${paper.slug || encodeURIComponent(paper.name)}`} target="_blank" style={{ padding: '0.5rem 1rem', background: '#667eea', color: 'white', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>🔗 Xem đề</a>
+                      <button onClick={() => openEditPaper(paper)} style={{ padding: '0.5rem 0.75rem', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: '#92400e' }} title="Sửa đề">✏️ Sửa</button>
+                      <button onClick={() => handleDeleteExamPaper(paper.id, paper.name)} style={{ padding: '0.5rem 0.75rem', background: '#fed7d7', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '1rem' }} title="Xóa đề">🗑️</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      <div className={styles.filters}>
+      {activeTab === 'questions' && (
+        <>
+          <div className={styles.filters}>
         <input type="text" placeholder="Tìm kiếm câu hỏi..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
         <select value={filterType} onChange={e => setFilterType(e.target.value)} className={styles.select}>
           <option value="all">Tất cả loại</option>
@@ -480,6 +573,10 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
         <select value={filterDe} onChange={e => setFilterDe(e.target.value)} className={styles.select}>
           <option value="all">Tất cả đề</option>
           {uniqueDe.map(de => <option key={de} value={de}>{de}</option>)}
+        </select>
+        <select value={filterClassification} onChange={e => setFilterClassification(e.target.value)} className={styles.select} style={{ maxWidth: '240px' }}>
+          <option value="all">Tất cả phân loại</option>
+          {uniqueClassifications.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
@@ -510,6 +607,11 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
                 <span className={styles.badge}>{q.de_id}</span>
                 <span className={styles.badge}>Câu {q.so_cau}</span>
                 <span className={`${styles.badge} ${styles[getQuestionType(q)]}`}>{getQuestionType(q).toUpperCase()}</span>
+                {q.metadata?.dang_toan && (
+                  <span className={styles.badge} style={{ background: '#e2e8f0', color: '#4a5568', fontWeight: 600 }}>
+                    🏷️ {q.metadata.dang_toan}
+                  </span>
+                )}
               </div>
               <div className={styles.actions}>
                 {isAdmin && <button onClick={() => openEdit(q)} className={styles.saveEditBtn} title="Sửa câu hỏi">✏️ Sửa</button>}
@@ -602,8 +704,73 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
           <button className={styles.pageBtn} onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>»</button>
         </div>
       )}
+        </>
+      )}
 
-      {/* Edit Modal */}
+      {/* Edit Exam Paper Modal */}
+      {editingPaper && (
+        <div className={styles.generatorOverlay} onClick={e => { if (e.target === e.currentTarget) setEditingPaper(null); }}>
+          <div className={styles.editModal} style={{ maxWidth: '860px' }}>
+            <div className={styles.generatorHeader}>
+              <h2>✏️ Sửa đề thi</h2>
+              <button onClick={() => setEditingPaper(null)} className={styles.closeBtn}>&times;</button>
+            </div>
+            <div className={styles.editModalBody}>
+              <div className={styles.editField}>
+                <label className={styles.editLabel}>Tên đề thi</label>
+                <input
+                  className={styles.editInput}
+                  value={editPaperName}
+                  onChange={e => setEditPaperName(e.target.value)}
+                  placeholder="Nhập tên đề..."
+                />
+              </div>
+              <div className={styles.editField}>
+                <label className={styles.editLabel}>
+                  Danh sách câu hỏi ({editPaperQuestionIds.length} câu)
+                </label>
+                {isLoadingPaperQs ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: '#718096' }}>⏳ Đang tải câu hỏi...</div>
+                ) : editPaperQuestions.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '400px', overflowY: 'auto' }}>
+                    {editPaperQuestions.map((q, idx) => (
+                      <div key={q.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ minWidth: '32px', fontWeight: 700, color: '#667eea', fontSize: '0.875rem' }}>#{idx + 1}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                            <span style={{ padding: '0.15rem 0.5rem', background: '#edf2f7', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#4a5568' }}>{q.de_id}</span>
+                            <span style={{ padding: '0.15rem 0.5rem', background: '#edf2f7', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#4a5568' }}>Câu {q.so_cau}</span>
+                            <span style={{ padding: '0.15rem 0.5rem', background: getQuestionType(q) === 'mcq' ? '#bee3f8' : getQuestionType(q) === 'msq' ? '#c6f6d5' : '#fed7d7', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, color: getQuestionType(q) === 'mcq' ? '#2c5282' : getQuestionType(q) === 'msq' ? '#22543d' : '#742a2a' }}>{getQuestionType(q).toUpperCase()}</span>
+                          </div>
+                          <div className="math-content" style={{ fontSize: '0.875rem', color: '#2d3748', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }} dangerouslySetInnerHTML={{ __html: q.content }} />
+                        </div>
+                        <button
+                          onClick={() => handleRemoveQuestionFromPaper(q.id)}
+                          style={{ padding: '0.35rem 0.6rem', background: '#fed7d7', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', color: '#c53030', flexShrink: 0 }}
+                          title="Xóa câu này khỏi đề"
+                        >🗑️</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: '#a0aec0', fontSize: '0.875rem' }}>Không có câu hỏi nào trong đề</div>
+                )}
+              </div>
+            </div>
+            <div className={styles.editModalFooter}>
+              <span style={{ fontSize: '0.875rem', color: '#718096', marginRight: 'auto' }}>
+                {editPaperQuestionIds.length} câu hỏi
+              </span>
+              <button onClick={() => setEditingPaper(null)} className={styles.cancelBtn}>Hủy</button>
+              <button onClick={handleSavePaper} className={styles.saveBtn} disabled={isSavingPaper || !editPaperName.trim()}>
+                {isSavingPaper ? 'Đang lưu...' : '💾 Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Question Modal */}
       {editingQ && (
         <div className={styles.generatorOverlay} onClick={e => { if (e.target === e.currentTarget) setEditingQ(null); }}>
           <div className={styles.editModal}>

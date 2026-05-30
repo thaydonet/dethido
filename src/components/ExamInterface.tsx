@@ -29,7 +29,6 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
   const [timeLeft, setTimeLeft] = useState(90 * 60); // 90 minutes
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showExplanation, setShowExplanation] = useState<Record<string, boolean>>({});
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   const toggleExplanation = (id: string) => {
@@ -187,22 +186,8 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
   return (
     <div className={styles.container}>
       {/* Sticky Header */}
-      <header className={`${styles.header} ${!isMobileMenuOpen ? styles.headerCollapsed : ''}`}>
-        <div className={styles.mobileToggle}>
-          <button
-            className={styles.hamburgerBtn}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? '✕ Đóng' : '☰ Menu'}
-          </button>
-          {!isMobileMenuOpen && (
-            <div className={`${styles.timer} ${timeLeft < 300 ? styles.timerWarning : ''} ${styles.miniTimer}`}>
-              {formatTime(timeLeft)}
-            </div>
-          )}
-        </div>
-
-        <div className={`${styles.headerContent} ${!isMobileMenuOpen ? styles.hideOnMobile : ''}`}>
+      <header className={styles.header}>
+        <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
             <button onClick={() => router.push('/')} className={styles.homeButton}>
               🏠 Home
@@ -225,26 +210,14 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
 
       {/* Main Content */}
       <main className={styles.content}>
-        {/* Section Headers */}
-        <div className={styles.sectionInfo}>
-          <div className={`${styles.sectionBadge} ${styles.section1Badge}`}>
-            Phần 1: Trắc nghiệm (MCQ) - {mcqCount} câu
-          </div>
-          <div className={`${styles.sectionBadge} ${styles.section2Badge}`}>
-            Phần 2: Đúng - sai (MSQ) - {msqCount} câu
-          </div>
-          <div className={`${styles.sectionBadge} ${styles.section3Badge}`}>
-            Phần 3: Trả lời ngắn (SA) - {saCount} câu
-          </div>
-        </div>
 
         {/* All Questions grouped by section */}
         <div className={styles.questionsList}>
           {(() => {
             const sectionLabels: Record<string, string> = {
-              mcq: 'Phần I: Trắc nghiệm (MCQ)',
-              msq: 'Phần II: Đúng - sai (MSQ)',
-              sa: 'Phần III: Trả lời ngắn',
+              mcq: 'Trắc nghiệm (MCQ)',
+              msq: 'Đúng - Sai (MSQ)',
+              sa: 'Trả lời ngắn (SA)',
             };
             let lastType = '';
             return displayQuestions.map((q) => {
@@ -342,17 +315,43 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
                       const userChoice = userAnswerObj[option];
                       const correctAnswers = q.answer.split(',');
                       const isCorrectAnswer = correctAnswers.includes(option);
+                      // isCorrectAnswer === true  → đáp án đúng là "Đúng"
+                      // isCorrectAnswer === false → đáp án đúng là "Sai"
 
-                      const showResult = isSubmitted;
-                      const isCorrect = showResult && userChoice === isCorrectAnswer;
-                      const isWrong = showResult && userChoice !== undefined && userChoice !== isCorrectAnswer;
+                      // --- Màu cho nút "Đúng" ---
+                      // Xanh: nếu đây là đáp án đúng (isCorrectAnswer)
+                      // Đỏ: nếu user chọn "Đúng" nhưng sai
+                      // Cam (selected): trước khi nộp bài
+                      const trueBtnClass = isSubmitted
+                        ? (isCorrectAnswer
+                            ? styles.msqBtnCorrect                          // xanh – đây là đáp án đúng
+                            : userChoice === true
+                              ? styles.msqBtnWrong                          // đỏ  – user chọn sai
+                              : '')
+                        : (userChoice === true ? styles.msqButtonSelected : '');
+
+                      // --- Màu cho nút "Sai" ---
+                      const falseBtnClass = isSubmitted
+                        ? (!isCorrectAnswer
+                            ? styles.msqBtnCorrect                          // xanh – đây là đáp án đúng
+                            : userChoice === false
+                              ? styles.msqBtnWrong                          // đỏ  – user chọn sai
+                              : '')
+                        : (userChoice === false ? styles.msqButtonSelected : '');
+
+                      // Row tint nhẹ theo kết quả
+                      const rowClass = isSubmitted
+                        ? (userChoice === isCorrectAnswer
+                            ? styles.msqCorrect
+                            : userChoice !== undefined
+                              ? styles.msqWrong
+                              : styles.msqUnanswered)
+                        : '';
 
                       return (
                         <div
                           key={option}
-                          className={`${styles.msqItem} ${showResult && isCorrect ? styles.msqCorrect :
-                              showResult && isWrong ? styles.msqWrong : ''
-                            }`}
+                          className={`${styles.msqItem} ${rowClass}`}
                         >
                           <div className={styles.msqContent}>
                             <span className={styles.msqLabel}>{option})</span>
@@ -361,7 +360,7 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
                             </span>
                           </div>
                           <div className={styles.msqButtons}>
-                            <label className={`${styles.msqButton} ${userChoice === true ? styles.msqButtonSelected : ''}`}>
+                            <label className={`${styles.msqButton} ${trueBtnClass}`}>
                               <input
                                 type="radio"
                                 name={`question-${q.exam_number}-${option}`}
@@ -379,7 +378,7 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
                               />
                               <span>Đúng</span>
                             </label>
-                            <label className={`${styles.msqButton} ${userChoice === false ? styles.msqButtonSelected : ''}`}>
+                            <label className={`${styles.msqButton} ${falseBtnClass}`}>
                               <input
                                 type="radio"
                                 name={`question-${q.exam_number}-${option}`}
@@ -403,6 +402,7 @@ export default function ExamInterface({ questions: initialQuestions, examTitle }
                     })}
                   </div>
                 )}
+
 
                 {/* Short Answer */}
                 {type === 'sa' && (

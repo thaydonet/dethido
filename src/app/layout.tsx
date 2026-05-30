@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import 'katex/dist/katex.min.css';
 import "./globals.css";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://thi.booktoan.com';
 const defaultTitle = "Ngân hàng Câu hỏi TN THPT Môn Toán 2026";
@@ -55,8 +57,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body style={{ margin: 0, padding: 0 }}>
-        {children}
+      <body style={{ margin: 0, padding: 0, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Header />
+        <main style={{ flex: 1 }}>
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );

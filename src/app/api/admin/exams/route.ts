@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from('exam_papers')
-      .select('id, name, slug, question_ids, created_at, created_by')
+      .select('id, name, slug, question_ids, created_at, created_by, view_count')
       .order('created_at', { ascending: false });
 
     if (isTeacher && userId) {
@@ -34,20 +34,49 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await query;
 
+    let examPapers = data || [];
+
     if (error) {
-      // Fallback if created_by doesn't exist yet
+      // Fallback if view_count or created_by doesn't exist yet
       if (error.code === '42703') { // undefined_column
         const fallbackQuery = await supabaseAdmin
           .from('exam_papers')
-          .select('id, name, slug, question_ids, created_at')
+          .select('id, name, slug, question_ids, created_at, created_by')
           .order('created_at', { ascending: false });
-        return NextResponse.json({ data: fallbackQuery.data || [] });
+        
+        if (fallbackQuery.error && fallbackQuery.error.code === '42703') {
+           const veryOldQuery = await supabaseAdmin
+            .from('exam_papers')
+            .select('id, name, slug, question_ids, created_at')
+            .order('created_at', { ascending: false });
+           examPapers = veryOldQuery.data || [];
+        } else {
+           examPapers = fallbackQuery.data || [];
+        }
+      } else {
+        return NextResponse.json({ error: error.message }, { status: 500 });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ data: data || [] });
-  } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    let totalTeachers = 0;
+    let usersList: any[] = [];
+    const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (!usersError && usersData?.users) {
+      usersList = usersData.users;
+      totalTeachers = usersList.filter(u => u.user_metadata?.role === 'teacher').length;
+    }
+
+    const finalData = examPapers.map((paper: any) => {
+      const creator = usersList.find(u => u.id === paper.created_by);
+      return {
+        ...paper,
+        created_by_email: creator ? creator.email : 'N/A'
+      };
+    });
+
+    return NextResponse.json({ data: finalData, totalTeachers });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }

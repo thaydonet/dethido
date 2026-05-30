@@ -54,8 +54,8 @@ export default function HomeLayout({ examSets, totalExams, totalQuestions, curre
         {/* Stats bar */}
         <div className="hl-stats">
           {[
-            { icon: '📚', value: '45', label: 'Đề thi bám sát cấu trúc' },
-            { icon: '∑', value: '980', label: 'Câu hỏi chất lượng' },
+            { icon: '📚', value: '55', label: 'Đề thi bám sát cấu trúc' },
+            { icon: '∑', value: '1500', label: 'Câu hỏi chất lượng' },
             { icon: '💡', value: '100%', label: 'Có lời giải chi tiết' },
             { icon: '❓', value: '♾️', label: 'Đa dạng dạng Toán' },
           ].map(s => (
