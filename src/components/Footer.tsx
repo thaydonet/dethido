@@ -1,6 +1,12 @@
 import Link from 'next/link';
 
-const FOOTER_LINKS = {
+interface FooterLink {
+  href: string;
+  label: string;
+  external?: boolean;
+}
+
+const FOOTER_LINKS: Record<string, FooterLink[]> = {
   'Học tập': [
     { href: '/de-thi-thu-tn-thpt-mon-toan-2026', label: 'Thi thử TN THPT Toán 2026' },
     { href: '/', label: 'Kho đề thi' },
