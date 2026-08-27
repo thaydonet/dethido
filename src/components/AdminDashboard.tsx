@@ -26,8 +26,29 @@ interface AdminDashboardProps {
 
 const PAGE_SIZE = 50;
 
+const SAMPLE_JSON = `{
+  "title": "Đề kiểm tra Toán 12",
+  "questions": [
+    {
+      "type": "mcq",
+      "question": "Tìm đạo hàm của hàm số $f(x) = x^3 - 3x^2 + 2x - 1$",
+      "option_a": "$f'(x) = 3x^2 - 6x + 2$",
+      "option_b": "$f'(x) = x^3 - 3x^2 + 2$",
+      "option_c": "$f'(x) = 3x^2 - 6x + 1$",
+      "option_d": "$f'(x) = 3x^2 - 3x + 2$",
+      "correct_option": "A",
+      "explanation": "Áp dụng quy tắc đạo hàm",
+      "difficulty_level": "easy",
+      "is_dynamic": false
+    }
+  ]
+}`;
+
 export default function AdminDashboard({ initialQuestions, user }: AdminDashboardProps) {
-  const isAdmin = user?.user_metadata?.role !== 'teacher';
+  const isTeacher = user?.user_metadata?.role === 'teacher';
+  const isAdmin = !isTeacher;
+  const userEmail = user?.email || '';
+  const hasGrant = user?.user_metadata?.hasGrant === true;
   const [questions, setQuestions] = useState(initialQuestions);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterDe, setFilterDe] = useState<string>('all');
@@ -53,6 +74,24 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
   const [examPapers, setExamPapers] = useState<{ id: string; name: string; slug?: string; question_ids: string[]; created_by_email?: string; view_count?: number }[]>([]);
   const [totalTeachers, setTotalTeachers] = useState<number>(0);
 
+  // JSON Import state
+  const [showJsonImport, setShowJsonImport] = useState(false);
+  const [jsonText, setJsonText] = useState('');
+  const [jsonParseResult, setJsonParseResult] = useState<{ valid: boolean; title?: string; count?: number; error?: string } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Access code — teacher redeem
+  const [redeemCode, setRedeemCode] = useState('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [redeemMsg, setRedeemMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [grantActivated, setGrantActivated] = useState(hasGrant);
+
+  // Access code — admin manage
+  const [accessCodes, setAccessCodes] = useState<{ id: string; code: string; description: string; max_uses: number; used_count: number; is_active: boolean; created_at: string }[]>([]);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [newCodeDesc, setNewCodeDesc] = useState('');
+  const [newCodeMaxUses, setNewCodeMaxUses] = useState('1');
+
   // Edit exam paper state
   const [editingPaper, setEditingPaper] = useState<{ id: string; name: string; slug?: string; question_ids: string[]; created_by_email?: string; view_count?: number } | null>(null);
   const [editPaperName, setEditPaperName] = useState('');
@@ -71,6 +110,13 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
         if (d.totalTeachers !== undefined) setTotalTeachers(d.totalTeachers);
       })
       .catch(() => {});
+    // Admin: load access codes
+    if (isAdmin) {
+      fetch('/api/admin/access-codes')
+        .then(r => r.json())
+        .then(d => setAccessCodes(d.data || []))
+        .catch(() => {});
+    }
   }, []);
 
   const handleLogout = async () => {
@@ -96,7 +142,8 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
       // store metadata.explanation separately under a custom key
       metadata: { 
         ...q.metadata, 
-        _editExplanation: q.metadata?.explanation || q.metadata?.loi_giai || q.explanation || '' 
+        _editExplanation: q.metadata?.explanation || q.metadata?.loi_giai || q.explanation || '',
+        _editDangToan: q.metadata?.dang_toan || '',
       },
     });
   };
@@ -105,10 +152,15 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
     if (!editingQ) return;
     setIsSavingEdit(true);
     try {
-      // Build updated metadata: keep existing fields, update explanation
+      // Build updated metadata: keep existing fields, update explanation and dang_toan
       const existingMeta = editingQ.metadata || {};
-      const { _editExplanation, ...restMeta } = (editForm.metadata || {}) as any;
-      const updatedMetadata = { ...existingMeta, ...restMeta, explanation: _editExplanation ?? existingMeta.explanation };
+      const { _editExplanation, _editDangToan, ...restMeta } = (editForm.metadata || {}) as any;
+      const updatedMetadata = { 
+        ...existingMeta, 
+        ...restMeta, 
+        explanation: _editExplanation ?? existingMeta.explanation,
+        dang_toan: _editDangToan !== undefined ? _editDangToan : existingMeta.dang_toan,
+      };
 
       const payload: any = {
         content: editForm.content,
@@ -487,14 +539,140 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
     }
   }, [pagedQuestions, expandedId, showSolution, generatedExam, isGenerating]);
 
+  // JSON parse on textarea change
+  const handleJsonTextChange = (val: string) => {
+    setJsonText(val);
+    if (!val.trim()) { setJsonParseResult(null); return; }
+    try {
+      const parsed = JSON.parse(val);
+      if (!parsed.title || !Array.isArray(parsed.questions)) {
+        setJsonParseResult({ valid: false, error: 'JSON cần có trường "title" và mảng "questions".' });
+      } else {
+        setJsonParseResult({ valid: true, title: parsed.title, count: parsed.questions.length });
+      }
+    } catch (e: any) {
+      setJsonParseResult({ valid: false, error: 'JSON không hợp lệ: ' + e.message });
+    }
+  };
+
+  const handleImportJson = async () => {
+    if (!jsonParseResult?.valid || !jsonText.trim()) return;
+    setIsImporting(true);
+    try {
+      const res = await fetch('/api/admin/questions/import-json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonText,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`✅ Đã nhập thành công ${data.inserted} câu hỏi vào ngân hàng của bạn!`);
+        setShowJsonImport(false);
+        setJsonText('');
+        setJsonParseResult(null);
+        // Reload questions
+        const r = await fetch('/api/admin/questions');
+        const d = await r.json();
+        if (d.data) setQuestions(d.data);
+      } else {
+        alert('❌ Lỗi: ' + data.error);
+      }
+    } catch {
+      alert('Có lỗi kết nối, vui lòng thử lại.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Teacher: redeem access code
+  const handleRedeemCode = async () => {
+    if (!redeemCode.trim()) return;
+    setIsRedeeming(true);
+    setRedeemMsg(null);
+    try {
+      const res = await fetch('/api/admin/redeem-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: redeemCode.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRedeemMsg({ ok: true, text: data.message || '✅ Kích hoạt thành công!' });
+        setGrantActivated(true);
+        setRedeemCode('');
+        // Reload page to fetch admin questions
+        setTimeout(() => router.refresh(), 1500);
+      } else {
+        setRedeemMsg({ ok: false, text: data.error || 'Có lỗi xảy ra.' });
+      }
+    } catch {
+      setRedeemMsg({ ok: false, text: 'Lỗi kết nối. Vui lòng thử lại.' });
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
+
+  // Admin: generate a new access code
+  const handleGenerateCode = async () => {
+    setIsGeneratingCode(true);
+    try {
+      const res = await fetch('/api/admin/access-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: newCodeDesc.trim(), max_uses: parseInt(newCodeMaxUses) || 1 }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAccessCodes(prev => [data.data, ...prev]);
+        setNewCodeDesc('');
+        setNewCodeMaxUses('1');
+      } else {
+        alert('Lỗi: ' + data.error);
+      }
+    } catch {
+      alert('Lỗi kết nối.');
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
+
+  // Admin: toggle code active
+  const handleToggleCode = async (id: string, currentActive: boolean) => {
+    const res = await fetch(`/api/admin/access-codes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !currentActive }),
+    });
+    if (res.ok) {
+      setAccessCodes(prev => prev.map(c => c.id === id ? { ...c, is_active: !currentActive } : c));
+    }
+  };
+
+  // Admin: delete a code
+  const handleDeleteCode = async (id: string) => {
+    if (!confirm('Xóa mã này?')) return;
+    const res = await fetch(`/api/admin/access-codes/${id}`, { method: 'DELETE' });
+    if (res.ok) setAccessCodes(prev => prev.filter(c => c.id !== id));
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>Admin Dashboard</h1>
-          <p className={styles.subtitle}>Quản lý ngân hàng câu hỏi</p>
+          <h1 className={styles.title}>{isAdmin ? '⚙️ Admin Dashboard' : '👨‍🏫 Bảng điều khiển Giáo viên'}</h1>
+          <p className={styles.subtitle}>
+            {isTeacher
+              ? (grantActivated ? '✅ Đang dùng ngân hàng Admin + câu hỏi của bạn' : 'Ngân hàng câu hỏi cá nhân của bạn')
+              : 'Quản lý toàn bộ ngân hàng câu hỏi'}
+          </p>
         </div>
-        <button onClick={handleLogout} className={styles.logoutBtn}>Đăng xuất</button>
+        <div className={styles.userInfo}>
+          <span className={isAdmin ? styles.roleBadgeAdmin : styles.roleBadgeTeacher}>
+            {isAdmin ? '👑 Admin' : '👨‍🏫 Giáo viên'}
+          </span>
+          <span className={styles.userEmail}>{userEmail}</span>
+          <button onClick={handleLogout} className={styles.logoutBtn}>Đăng xuất</button>
+        </div>
       </header>
 
       {/* Tabs navigation */}
@@ -523,6 +701,7 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
               { icon: '✏️', value: stats.typeCount.sa || 0, label: 'Trả lời ngắn (SA)' },
               { icon: '📋', value: examPapers.length, label: 'Đề thi đã tạo' },
               ...(isAdmin ? [{ icon: '👨‍🏫', value: totalTeachers, label: 'Giáo viên đăng ký' }] : []),
+              ...(isTeacher ? [{ icon: '📁', value: questions.length, label: 'Câu hỏi của tôi' }] : []),
             ].map((s, i) => (
               <div key={i} className={styles.statCard}>
                 <div className={styles.statIcon}>{s.icon}</div>
@@ -563,6 +742,138 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
               </div>
             </div>
           )}
+
+          {/* TEACHER: Promo banner + redeem code */}
+          {isTeacher && (
+            <div className={styles.promoSection}>
+              {!grantActivated ? (
+                <>
+                  <div className={styles.promoBanner}>
+                    <div className={styles.promoIcon}>🏆</div>
+                    <div className={styles.promoContent}>
+                      <div className={styles.promoTitle}>Nâng cấp ngân hàng câu hỏi của bạn!</div>
+                      <div className={styles.promoDesc}>
+                        Bạn cần ngân hàng câu hỏi toán <strong>Ôn thi TN THPT 2017 – ĐGNL – VSAT</strong>?<br/>
+                        Liên hệ Admin: <a href="mailto:thaydo.net@gmail.com" className={styles.promoLink}>thaydo.net@gmail.com</a> &nbsp;—&nbsp;
+                        Có hơn <strong>2.000 câu hỏi</strong> &amp; <strong>100 đề Toán 2026</strong> sẵn sàng sử dụng!
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.redeemBox}>
+                    <div className={styles.redeemTitle}>🔑 Đã có mã kích hoạt? Nhập vào đây:</div>
+                    <div className={styles.redeemRow}>
+                      <input
+                        className={styles.redeemInput}
+                        placeholder="VD: ABCD-EFGH-1234"
+                        value={redeemCode}
+                        onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+                        onKeyDown={e => e.key === 'Enter' && handleRedeemCode()}
+                        maxLength={14}
+                        spellCheck={false}
+                      />
+                      <button
+                        className={styles.redeemBtn}
+                        onClick={handleRedeemCode}
+                        disabled={isRedeeming || !redeemCode.trim()}
+                      >
+                        {isRedeeming ? '⏳ Đang xác thực...' : '🚀 Kích hoạt'}
+                      </button>
+                    </div>
+                    {redeemMsg && (
+                      <div className={redeemMsg.ok ? styles.redeemSuccess : styles.redeemError}>
+                        {redeemMsg.text}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className={styles.grantActiveBanner}>
+                  <span style={{ fontSize: '1.5rem' }}>🎉</span>
+                  <div>
+                    <div style={{ fontWeight: 700, color: '#276749' }}>Ngân hàng Admin đã được kích hoạt!</div>
+                    <div style={{ fontSize: '0.85rem', color: '#38a169', marginTop: '0.2rem' }}>
+                      Bạn đang sử dụng hơn 2.000 câu hỏi từ ngân hàng của Admin cùng câu hỏi cá nhân.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ADMIN: Access Code Management */}
+          {isAdmin && (
+            <div className={styles.codeManagerSection}>
+              <h2 className={styles.codeManagerTitle}>🔑 Quản lý mã truy cập</h2>
+              <p style={{ fontSize: '0.875rem', color: '#718096', marginBottom: '1rem' }}>
+                Tạo mã và gửi cho giáo viên để họ kích hoạt quyền dùng ngân hàng của bạn.
+              </p>
+              <div className={styles.codeGenRow}>
+                <input
+                  className={styles.codeDescInput}
+                  placeholder="Ghi chú (tên GV, mục đích...)"
+                  value={newCodeDesc}
+                  onChange={e => setNewCodeDesc(e.target.value)}
+                />
+                <select
+                  className={styles.codeUsesSelect}
+                  value={newCodeMaxUses}
+                  onChange={e => setNewCodeMaxUses(e.target.value)}
+                >
+                  <option value="1">1 lần dùng</option>
+                  <option value="5">5 lần</option>
+                  <option value="10">10 lần</option>
+                  <option value="50">50 lần</option>
+                  <option value="999">Không giới hạn</option>
+                </select>
+                <button
+                  className={styles.genCodeBtn}
+                  onClick={handleGenerateCode}
+                  disabled={isGeneratingCode}
+                >
+                  {isGeneratingCode ? '⏳ Đang tạo...' : '✨ Tạo mã mới'}
+                </button>
+              </div>
+              {accessCodes.length > 0 ? (
+                <div className={styles.codeList}>
+                  {accessCodes.map(c => (
+                    <div key={c.id} className={`${styles.codeItem} ${!c.is_active ? styles.codeItemInactive : ''}`}>
+                      <div className={styles.codeValue}>
+                        <code>{c.code}</code>
+                        <button
+                          className={styles.codeCopyBtn}
+                          onClick={() => { navigator.clipboard.writeText(c.code); }}
+                          title="Sao chép mã"
+                        >📋</button>
+                      </div>
+                      <div className={styles.codeMeta}>
+                        <span>{c.description || '—'}</span>
+                        <span className={styles.codeUsage}>{c.used_count}/{c.max_uses === 999 ? '∞' : c.max_uses} lần dùng</span>
+                        <span className={c.is_active ? styles.codeActive : styles.codeInactive}>
+                          {c.is_active ? '● Hoạt động' : '○ Đã tắt'}
+                        </span>
+                      </div>
+                      <div className={styles.codeActions}>
+                        <button
+                          className={styles.codeToggleBtn}
+                          onClick={() => handleToggleCode(c.id, c.is_active)}
+                        >
+                          {c.is_active ? '🔴 Tắt' : '🟢 Bật'}
+                        </button>
+                        <button
+                          className={styles.codeDeleteBtn}
+                          onClick={() => handleDeleteCode(c.id)}
+                        >🗑️</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: '#a0aec0', background: '#f8fafc', borderRadius: '10px', fontSize: '0.9rem' }}>
+                  Chưa có mã nào. Tạo mã đầu tiên để gửi cho giáo viên!
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -586,15 +897,55 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
         </select>
       </div>
 
+      {isTeacher && (
+        <div className={styles.infoBoxTeacher}>
+          📌 Đây là ngân hàng câu hỏi cá nhân của bạn. Nhập JSON để thêm câu hỏi mới, sau đó chọn câu hỏi để tạo đề thi.
+        </div>
+      )}
+
       <div className={styles.results}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <p className={styles.resultCount}>
-            Hiển thị {filteredQuestions.length} / {stats.total} câu hỏi
-            {totalPages > 1 && ` — Trang ${currentPage}/${totalPages}`}
-          </p>
-          <button onClick={handleGenerateExam} className={styles.generateBtn}>
-            ✨ Tạo đề ngẫu nhiên (12 MCQ + 4 MSQ + 6 SA)
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <p className={styles.resultCount} style={{ margin: 0 }}>
+              Hiển thị {filteredQuestions.length} / {stats.total} câu hỏi
+              {totalPages > 1 && ` — Trang ${currentPage}/${totalPages}`}
+            </p>
+            {filteredQuestions.length > 0 && (
+              <button
+                className={styles.selectAllBtn}
+                onClick={() => {
+                  const allFilteredIds = filteredQuestions.map(q => q.id);
+                  const allSelected = allFilteredIds.every(id => selectedIds.has(id));
+                  if (allSelected) {
+                    // Deselect all filtered
+                    setSelectedIds(prev => {
+                      const next = new Set(prev);
+                      allFilteredIds.forEach(id => next.delete(id));
+                      return next;
+                    });
+                  } else {
+                    // Select all filtered
+                    setSelectedIds(prev => new Set([...prev, ...allFilteredIds]));
+                  }
+                }}
+              >
+                {filteredQuestions.every(q => selectedIds.has(q.id))
+                  ? `☑ Bỏ chọn tất cả (${filteredQuestions.length})`
+                  : `☐ Chọn tất cả (${filteredQuestions.length})`}
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              className={styles.importJsonBtn}
+              onClick={() => setShowJsonImport(true)}
+            >
+              📥 Nhập câu hỏi từ JSON
+            </button>
+            <button onClick={handleGenerateExam} className={styles.generateBtn}>
+              ✨ Tạo đề ngẫu nhiên (12 MCQ + 4 MSQ + 6 SA)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -624,7 +975,10 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
                 <button onClick={() => setExpandedId(expandedId === q.id ? null : q.id)} className={styles.editBtn} title="Xem chi tiết">
                   {expandedId === q.id ? '▲' : '▼'}
                 </button>
-                {isAdmin && <button onClick={() => handleDelete(q.id)} className={styles.deleteBtn} title="Xóa">🗑️</button>}
+                {/* Admin: delete any; Teacher: only delete own questions */}
+                {(isAdmin || (isTeacher && (q as any).created_by)) && (
+                  <button onClick={() => handleDelete(q.id)} className={styles.deleteBtn} title="Xóa">🗑️</button>
+                )}
               </div>
             </div>
 
@@ -810,6 +1164,18 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
                 {editForm.image_url && <img src={editForm.image_url} alt="preview" style={{ maxWidth: '100%', maxHeight: '200px', marginTop: '0.5rem', borderRadius: '8px', objectFit: 'contain' }} />}
               </div>
               <div className={styles.editField}>
+                <label className={styles.editLabel}>Dạng toán (metadata → <code>dang_toan</code>)</label>
+                <input
+                  className={styles.editInput}
+                  value={(editForm.metadata as any)?._editDangToan || ''}
+                  onChange={e => setEditForm(f => ({
+                    ...f,
+                    metadata: { ...(f.metadata as any), _editDangToan: e.target.value },
+                  }))}
+                  placeholder="VD: Hàm số, Tích phân, Xác suất..."
+                />
+              </div>
+              <div className={styles.editField}>
                 <label className={styles.editLabel}>Lời giải (metadata → <code>explanation</code>)</label>
                 <textarea
                   className={styles.editTextarea}
@@ -826,6 +1192,62 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
               <button onClick={() => setEditingQ(null)} className={styles.cancelBtn}>Hủy</button>
               <button onClick={handleSaveEdit} className={styles.saveBtn} disabled={isSavingEdit}>
                 {isSavingEdit ? 'Đang lưu...' : '💾 Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JSON Import Modal */}
+      {showJsonImport && (
+        <div className={styles.jsonImportOverlay} onClick={e => { if (e.target === e.currentTarget) setShowJsonImport(false); }}>
+          <div className={styles.jsonImportModal}>
+            <div className={styles.jsonImportHeader}>
+              <h2>📥 Nhập câu hỏi từ JSON</h2>
+              <button onClick={() => setShowJsonImport(false)} className={styles.closeBtn}>&times;</button>
+            </div>
+            <div className={styles.jsonImportBody}>
+              <div className={styles.infoBox}>
+                <strong>Định dạng JSON hợp lệ:</strong> Cần có <code>"title"</code> (tên đề) và <code>"questions"</code> (mảng câu hỏi). Mỗi câu hỏi cần có <code>type</code> (<code>mcq</code> / <code>msq</code> / <code>sa</code> / <code>tl</code>), <code>question</code>, <code>correct_option</code>. MCQ/MSQ cần thêm <code>option_a</code>–<code>option_d</code>.
+              </div>
+              <textarea
+                className={styles.jsonTextarea}
+                placeholder={`Dán JSON vào đây...\n\nVí dụ:\n${SAMPLE_JSON}`}
+                value={jsonText}
+                onChange={e => handleJsonTextChange(e.target.value)}
+                spellCheck={false}
+              />
+              {jsonParseResult && (
+                jsonParseResult.valid ? (
+                  <div className={styles.jsonPreview}>
+                    ✅ <strong>Hợp lệ!</strong>&nbsp;Tên đề: <em>"{jsonParseResult.title}"</em> — Số câu hỏi: <strong>{jsonParseResult.count}</strong>
+                  </div>
+                ) : (
+                  <div className={styles.jsonError}>
+                    ❌ {jsonParseResult.error}
+                  </div>
+                )
+              )}
+            </div>
+            <div className={styles.jsonImportFooter}>
+              <button
+                className={styles.jsonSampleBtn}
+                onClick={() => handleJsonTextChange(SAMPLE_JSON)}
+              >
+                📄 Dùng JSON mẫu
+              </button>
+              <button
+                onClick={() => { setShowJsonImport(false); setJsonText(''); setJsonParseResult(null); }}
+                className={styles.cancelBtn}
+              >
+                Hủy
+              </button>
+              <button
+                className={styles.jsonImportSubmitBtn}
+                onClick={handleImportJson}
+                disabled={!jsonParseResult?.valid || isImporting}
+              >
+                {isImporting ? '⏳ Đang nhập...' : '💾 Lưu vào ngân hàng'}
               </button>
             </div>
           </div>

@@ -7,17 +7,18 @@ interface FooterLink {
 }
 
 const FOOTER_LINKS: Record<string, FooterLink[]> = {
-  'Học tập': [
+  'Hệ thống & Học tập': [
     { href: '/de-thi-thu-tn-thpt-mon-toan-2026', label: 'Thi thử TN THPT Toán 2026' },
-    { href: '/', label: 'Kho đề thi' },
+    { href: 'https://booktoan.com', label: 'Tài liệu ôn thi Toán 12', external: true },
+    { href: 'https://hoc.io.vn', label: 'Ngân hàng câu hỏi trắc nghiệm Toán THPT', external: true },
   ],
-  'Giáo viên': [
-    { href: '/admin', label: 'Trang quản trị' },
-    { href: 'https://thi.booktoan.com/admin/', label: 'Tạo đề thi online', external: true },
+  'Dành cho Giáo viên': [
+    { href: '/admin', label: 'Trang quản trị nội bộ' },
+    { href: '/admin/', label: 'Tạo đề online & Xuất Word/PDF', external: true },
   ],
-  'Liên hệ': [
-    { href: 'mailto:admin@lop12.com', label: 'admin@lop12.com', external: true },
-    { href: 'https://lop12.com', label: 'lop12.com', external: true },
+  'Hỗ trợ & Liên hệ': [
+    { href: 'mailto:admin@lop12.com', label: 'Email: admin@lop12.com', external: true },
+    { href: 'https://lop12.com', label: 'Website: lop12.com', external: true },
   ],
 };
 
@@ -26,226 +27,232 @@ export default function Footer() {
 
   return (
     <footer className="ft-root" role="contentinfo" aria-label="Footer">
-      {/* Wave divider */}
-      <div className="ft-wave" aria-hidden>
-        <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z"
-            fill="currentColor"
-          />
-        </svg>
-      </div>
+      <div className="ft-inner">
 
-      <div className="ft-body">
-        <div className="ft-inner">
-          {/* Brand column */}
-          <div className="ft-brand">
-            <Link href="/" className="ft-logo" aria-label="Trang chủ">
-              <span className="ft-logo-icon">📐</span>
-              <span className="ft-logo-name">lop12<span>.com</span></span>
-            </Link>
-            <p className="ft-tagline">
-              Hệ thống ôn luyện TN THPT Môn Toán 2026 — Đề thi chất lượng, lời giải chi tiết, miễn phí hoàn toàn.
-            </p>
-            <div className="ft-badges">
-              <span className="ft-badge">📚 100+ Đề thi</span>
-              <span className="ft-badge">✅ Lời giải chi tiết</span>
-              <span className="ft-badge">🆓 Miễn phí</span>
-            </div>
+        {/* Brand column */}
+        <div className="ft-brand">
+          <Link href="/" className="ft-logo" aria-label="Trang chủ">
+            <div className="ft-logo-icon">📐</div>
+            <span className="ft-logo-name">Luyện thi Toán 12</span>
+          </Link>
+          <p className="ft-slogan">
+            “Học rõ từng bước – thi vững từng điểm.”
+          </p>
+          <p className="ft-desc">
+            Hệ thống ôn luyện trực tuyến môn Toán bám sát định dạng cấu trúc đề thi Tốt nghiệp THPT 2026 của Bộ GD&ĐT.
+          </p>
+          <div className="ft-badges">
+            <span className="ft-badge">✓ Chuẩn Bộ GD&ĐT 2026</span>
+            <span className="ft-badge">✓ 100% Lời giải chi tiết</span>
+            <span className="ft-badge">✓ Miễn phí hoàn toàn</span>
           </div>
-
-          {/* Link columns */}
-          {Object.entries(FOOTER_LINKS).map(([title, links]) => (
-            <div key={title} className="ft-col">
-              <h3 className="ft-col-title">{title}</h3>
-              <ul className="ft-col-list">
-                {links.map(({ href, label, external }) => (
-                  <li key={href}>
-                    {external ? (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ft-col-link"
-                      >
-                        {label}
-                        <span className="ft-ext-icon" aria-label="liên kết ngoài">↗</span>
-                      </a>
-                    ) : (
-                      <Link href={href} className="ft-col-link">
-                        {label}
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
         </div>
 
-        {/* Bottom bar */}
-        <div className="ft-bottom">
+        {/* Link columns */}
+        {Object.entries(FOOTER_LINKS).map(([title, links]) => (
+          <div key={title} className="ft-col">
+            <h3 className="ft-col-title">{title}</h3>
+            <ul className="ft-col-list">
+              {links.map(({ href, label, external }) => (
+                <li key={href}>
+                  {external ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ft-col-link"
+                    >
+                      {label}
+                      <span className="ft-ext-icon">↗</span>
+                    </a>
+                  ) : (
+                    <Link href={href} className="ft-col-link">
+                      {label}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom copyright */}
+      <div className="ft-bottom">
+        <div className="ft-bottom-inner">
           <p className="ft-copy">
-            © {year} <a href="https://lop12.com" target="_blank" rel="noopener noreferrer" className="ft-copy-link">lop12.com</a>.
-            {' '}Bảo lưu mọi quyền.
+            © {year} <strong>Luyện thi Toán 12</strong>. Bản quyền thuộc về hệ thống lop12.com - v2.0
           </p>
           <p className="ft-disclaimer">
-            Nội dung chỉ mang tính chất tham khảo và hỗ trợ ôn thi — Không phải tài liệu chính thức của Bộ GD&ĐT.
+            Tài liệu phục vụ mục đích học tập & ôn thi cá nhân, không thay thế sách giáo khoa và hướng dẫn chính thức từ Bộ Giáo dục & Đào tạo.
           </p>
         </div>
       </div>
 
       <style>{`
-        /* ════════════ FOOTER ════════════ */
         .ft-root {
+          background: #ffffff;
+          border-top: 1px solid #e2e8f0;
+          font-family: 'Be Vietnam Pro', sans-serif;
+          color: #475569;
           margin-top: auto;
-          font-family: 'Inter', sans-serif;
-          color: #cbd5e1;
-          position: relative;
         }
 
-        /* Wave */
-        .ft-wave {
-          color: #1e1b4b;
-          line-height: 0;
-          display: block;
-          overflow: hidden;
-        }
-        .ft-wave svg {
-          width: 100%;
-          height: 60px;
-          display: block;
-        }
-
-        /* Body */
-        .ft-body {
-          background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
-          padding: 3rem 1.5rem 0;
-        }
         .ft-inner {
-          max-width: 1200px;
+          max-width: 1240px;
           margin: 0 auto;
+          padding: 3.5rem 1.25rem 2.5rem;
           display: grid;
-          grid-template-columns: 2fr 1fr 1fr 1fr;
+          grid-template-columns: 2fr 1.2fr 1.2fr 1fr;
           gap: 3rem;
-          padding-bottom: 3rem;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* Brand */
+        .ft-brand {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
         .ft-logo {
           display: inline-flex;
           align-items: center;
           gap: 8px;
           text-decoration: none;
-          margin-bottom: 1rem;
         }
-        .ft-logo-icon { font-size: 1.5rem; }
+
+        .ft-logo-icon {
+          width: 32px;
+          height: 32px;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.1rem;
+        }
+
         .ft-logo-name {
-          font-family: 'Outfit', sans-serif;
-          font-size: 1.4rem;
+          font-size: 1.2rem;
           font-weight: 800;
-          color: white;
-          letter-spacing: -0.5px;
+          color: #0f172a;
+          letter-spacing: -0.02em;
         }
-        .ft-logo-name span { color: #a5b4fc; }
-        .ft-tagline {
-          font-size: 0.9rem;
-          line-height: 1.7;
-          color: #a5b4fc;
-          margin-bottom: 1.25rem;
-          max-width: 300px;
+
+        .ft-slogan {
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #2563eb;
+          margin: 0;
         }
+
+        .ft-desc {
+          font-size: 0.88rem;
+          line-height: 1.6;
+          color: #64748b;
+          margin: 0;
+          max-width: 360px;
+        }
+
         .ft-badges {
           display: flex;
           flex-wrap: wrap;
-          gap: 0.5rem;
-        }
-        .ft-badge {
-          display: inline-block;
-          background: rgba(165, 180, 252, 0.15);
-          border: 1px solid rgba(165, 180, 252, 0.2);
-          color: #c7d2fe;
-          font-size: 0.78rem;
-          font-weight: 600;
-          padding: 4px 10px;
-          border-radius: 20px;
-          white-space: nowrap;
+          gap: 6px;
+          margin-top: 0.5rem;
         }
 
-        /* Columns */
-        .ft-col-title {
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: white;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          margin-bottom: 1rem;
+        .ft-badge {
+          display: inline-block;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #475569;
+          font-size: 0.75rem;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 6px;
         }
+
+        .ft-col-title {
+          font-size: 0.9rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 1.1rem;
+          letter-spacing: -0.01em;
+        }
+
         .ft-col-list {
           list-style: none;
+          padding: 0;
+          margin: 0;
           display: flex;
           flex-direction: column;
-          gap: 0.6rem;
+          gap: 0.7rem;
         }
+
         .ft-col-link {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          font-size: 0.9rem;
-          color: #a5b4fc;
+          font-size: 0.88rem;
+          color: #64748b;
           text-decoration: none;
-          transition: color 0.2s;
+          transition: color 0.15s ease;
         }
+
         .ft-col-link:hover {
-          color: white;
+          color: #2563eb;
         }
+
         .ft-ext-icon {
           font-size: 0.75rem;
           opacity: 0.7;
         }
 
-        /* Bottom bar */
         .ft-bottom {
-          max-width: 1200px;
+          border-top: 1px solid #f1f5f9;
+          background: #f8fafc;
+          padding: 1.5rem 1.25rem;
+        }
+
+        .ft-bottom-inner {
+          max-width: 1240px;
           margin: 0 auto;
-          padding: 1.5rem 0 2.5rem;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 0.4rem;
           text-align: center;
-        }
-        .ft-copy {
-          font-size: 0.85rem;
-          color: #94a3b8;
-        }
-        .ft-copy-link {
-          color: #a5b4fc;
-          text-decoration: none;
-          transition: color 0.2s;
-        }
-        .ft-copy-link:hover { color: white; }
-        .ft-disclaimer {
-          font-size: 0.78rem;
-          color: #64748b;
-          max-width: 540px;
-          line-height: 1.5;
+          gap: 0.4rem;
         }
 
-        /* Responsive */
-        @media (max-width: 900px) {
+        .ft-copy {
+          font-size: 0.85rem;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .ft-disclaimer {
+          font-size: 0.78rem;
+          color: #94a3b8;
+          max-width: 680px;
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        @media (max-width: 960px) {
           .ft-inner {
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
+            gap: 2.5rem;
           }
-          .ft-brand { grid-column: 1 / -1; }
+          .ft-brand {
+            grid-column: 1 / -1;
+          }
         }
-        @media (max-width: 540px) {
+
+        @media (max-width: 600px) {
           .ft-inner {
             grid-template-columns: 1fr;
             gap: 2rem;
+            padding: 2.5rem 1.25rem 2rem;
           }
         }
       `}</style>

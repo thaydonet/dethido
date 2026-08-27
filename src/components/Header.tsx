@@ -1,108 +1,110 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function Header() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
   return (
     <>
-      <header className={`hn-header${scrolled ? ' hn-scrolled' : ''}`} role="banner">
+      <header className="hn-header" role="banner">
         <div className="hn-inner">
+
           {/* ── Logo ── */}
-          <Link href="/" className="hn-logo" aria-label="Trang chủ">
-            <span className="hn-logo-icon">📐</span>
-            <span className="hn-logo-text">
-              <span className="hn-logo-dot">luyện thi</span>
-            </span>
-            <span className="hn-logo-badge">Toán THPT 2026</span>
+          <Link href="/" className="hn-logo" aria-label="Trang chủ Luyện thi Toán 12">
+            <div className="hn-logo-icon-box">
+              <span className="hn-logo-icon">📐</span>
+            </div>
+            <div className="hn-logo-text-group">
+              <span className="hn-logo-title">Luyện thi Toán 12</span>
+              <span className="hn-logo-badge">TN THPT 2027</span>
+            </div>
           </Link>
 
-          {/* Tagline */}
+          {/* ── Tagline nhận diện bên phải ── */}
           <div className="hn-tagline">
-            Hệ thống ôn luyện môn Toán THPT Quốc gia
+            “Học rõ từng bước – thi vững từng điểm.”
           </div>
+
         </div>
       </header>
 
       <style>{`
-        /* ════════════ HEADER ════════════ */
         .hn-header {
           position: sticky;
           top: 0;
-          z-index: 999;
-          background: rgba(239, 246, 255, 0.85); /* Top menu top nền xanh nhẹ */
-          backdrop-filter: blur(16px) saturate(1.8);
-          -webkit-backdrop-filter: blur(16px) saturate(1.8);
-          border-bottom: 1px solid rgba(59, 130, 246, 0.15);
-          transition: box-shadow 0.3s, background 0.3s;
+          z-index: 1000;
+          background: #ffffff;
+          border-bottom: 1px solid #e2e8f0;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
         }
-        .hn-scrolled {
-          background: rgba(239, 246, 255, 0.98);
-          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
-        }
+
         .hn-inner {
-          max-width: 1200px;
+          max-width: 1240px;
           margin: 0 auto;
-          padding: 0 1.5rem;
-          height: 64px;
+          padding: 0 1.25rem;
+          height: 60px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 1rem;
+          gap: 1.5rem;
         }
 
-        /* Logo */
+        /* ── Logo ── */
         .hn-logo {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           text-decoration: none;
           flex-shrink: 0;
         }
-        .hn-logo-icon {
-          font-size: 1.5rem;
-          line-height: 1;
+
+        .hn-logo-icon-box {
+          width: 36px;
+          height: 36px;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.25rem;
         }
-        .hn-logo-text {
-          font-family: 'Outfit', sans-serif;
-          font-size: 1.3rem;
+
+        .hn-logo-text-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .hn-logo-title {
+          font-family: 'Be Vietnam Pro', sans-serif;
+          font-size: 1.15rem;
           font-weight: 800;
-          color: #1e293b;
-          letter-spacing: -0.5px;
+          color: #0f172a;
+          letter-spacing: -0.02em;
         }
-        .hn-logo-dot {
-          color: #2563eb;
-        }
+
         .hn-logo-badge {
-          display: inline-block;
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-          color: white;
-          font-size: 0.65rem;
+          background: #eff6ff;
+          color: #2563eb;
+          border: 1px solid #bfdbfe;
+          font-size: 0.72rem;
           font-weight: 700;
           padding: 2px 8px;
-          border-radius: 20px;
-          letter-spacing: 0.3px;
-          white-space: nowrap;
+          border-radius: 9999px;
         }
 
-        /* Tagline */
+        /* ── Tagline ── */
         .hn-tagline {
-          font-size: 0.9rem;
-          color: #4b5563;
-          font-weight: 500;
+          font-size: 0.88rem;
+          font-weight: 600;
+          color: #2563eb;
+          letter-spacing: -0.01em;
         }
 
-        /* Responsive */
         @media (max-width: 640px) {
-          .hn-tagline { display: none; }
+          .hn-tagline {
+            display: none;
+          }
         }
       `}</style>
     </>

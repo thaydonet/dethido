@@ -825,3 +825,582 @@
   background: #667eea;
   border-radius: 2px;
 }
+
+/* Role badge */
+.roleBadgeAdmin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(135deg, #f6ad55, #ed8936);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.roleBadgeTeacher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(135deg, #68d391, #38a169);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.userEmail {
+  font-size: 0.85rem;
+  color: #718096;
+  font-weight: 500;
+}
+
+/* Import JSON button */
+.importJsonBtn {
+  padding: 0.6rem 1.25rem;
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.importJsonBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+}
+
+/* JSON Import Modal */
+.jsonImportOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  padding: 1rem;
+}
+
+.jsonImportModal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.jsonImportHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.jsonImportHeader h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.jsonImportBody {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.jsonTextarea {
+  width: 100%;
+  min-height: 280px;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.825rem;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  background: #f8fafc;
+  color: #2d3748;
+}
+
+.jsonTextarea:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+}
+
+.jsonPreview {
+  padding: 0.85rem 1rem;
+  background: #ebf8ff;
+  border: 1px solid #bee3f8;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #2c5282;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.jsonError {
+  padding: 0.85rem 1rem;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #c53030;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.jsonImportFooter {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: #f8fafc;
+}
+
+.jsonSampleBtn {
+  padding: 0.5rem 1rem;
+  background: #edf2f7;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: #4a5568;
+  font-weight: 600;
+  transition: all 0.2s;
+  margin-right: auto;
+}
+
+.jsonSampleBtn:hover {
+  background: #e2e8f0;
+}
+
+.jsonImportSubmitBtn {
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.jsonImportSubmitBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.jsonImportSubmitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.infoBox {
+  padding: 0.85rem 1rem;
+  background: #f0fff4;
+  border: 1px solid #c6f6d5;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  color: #276749;
+  line-height: 1.6;
+}
+
+.infoBoxTeacher {
+  padding: 0.6rem 1rem;
+  background: #fffaf0;
+  border: 1px solid #fbd38d;
+  border-left: 4px solid #ed8936;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  color: #744210;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+/* ===== PROMO / REDEEM SECTION ===== */
+.promoSection {
+  margin-bottom: 2rem;
+}
+
+.promoBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 14px;
+  color: white;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.35);
+  margin-bottom: 1rem;
+}
+
+.promoIcon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.promoContent {
+  flex: 1;
+}
+
+.promoTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.2px;
+}
+
+.promoDesc {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  opacity: 0.95;
+}
+
+.promoLink {
+  color: #fde68a;
+  font-weight: 700;
+  text-decoration: none;
+}
+.promoLink:hover {
+  text-decoration: underline;
+}
+
+.redeemBox {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.redeemTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 0.85rem;
+}
+
+.redeemRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.redeemInput {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1.05rem;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #2d3748;
+  text-transform: uppercase;
+  transition: border-color 0.2s;
+  background: #f8fafc;
+}
+.redeemInput:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+}
+
+.redeemBtn {
+  padding: 0.65rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.redeemBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+.redeemBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.redeemSuccess {
+  margin-top: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: #f0fff4;
+  border: 1px solid #c6f6d5;
+  border-radius: 8px;
+  color: #276749;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.redeemError {
+  margin-top: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  color: #c53030;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.grantActiveBanner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+  border: 2px solid #68d391;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(72, 187, 120, 0.2);
+}
+
+/* ===== ADMIN CODE MANAGER ===== */
+.codeManagerSection {
+  background: white;
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+  margin-top: 2rem;
+}
+
+.codeManagerTitle {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+}
+
+.codeGenRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.codeDescInput {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.6rem 0.9rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+.codeDescInput:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.codeUsesSelect {
+  padding: 0.6rem 0.9rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  cursor: pointer;
+}
+
+.genCodeBtn {
+  padding: 0.65rem 1.25rem;
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.genCodeBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+}
+.genCodeBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.codeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.codeItem {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+.codeItem:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102,126,234,0.1);
+}
+
+.codeItemInactive {
+  opacity: 0.55;
+  background: #f1f5f9;
+}
+
+.codeValue {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.codeValue code {
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #2d3748;
+  letter-spacing: 1.5px;
+  background: #edf2f7;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+}
+
+.codeCopyBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.codeCopyBtn:hover { opacity: 1; }
+
+.codeMeta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.82rem;
+  color: #718096;
+  flex-wrap: wrap;
+}
+
+.codeUsage {
+  font-weight: 600;
+  color: #4a5568;
+  background: #e2e8f0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+}
+
+.codeActive {
+  color: #38a169;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.codeInactive {
+  color: #a0aec0;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.codeActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.codeToggleBtn {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.codeToggleBtn:hover {
+  background: #f7fafc;
+  border-color: #cbd5e0;
+}
+
+.codeDeleteBtn {
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #fed7d7;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.codeDeleteBtn:hover {
+  background: #feb2b2;
+}
+
+/* Select All button */
+.selectAllBtn {
+  padding: 0.35rem 0.85rem;
+  background: #edf2f7;
+  border: 1.5px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.selectAllBtn:hover {
+  background: #e2e8f0;
+  border-color: #667eea;
+  color: #667eea;
+}
