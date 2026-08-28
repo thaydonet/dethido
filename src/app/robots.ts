@@ -1,14 +1,14 @@
 import { MetadataRoute } from 'next'
 
-export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://thi.booktoan.com' // Fallback if no env is set
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://thi.booktoan.com';
 
+export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin/', '/api/'],
+      disallow: ['/api/', '/admin/'],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${siteUrl}/sitemap.xml`,
   }
 }

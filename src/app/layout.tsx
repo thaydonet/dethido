@@ -18,6 +18,13 @@ export const metadata: Metadata = {
   keywords: ["toán học", "tn thpt", "ngân hàng câu hỏi", "sach toan", "đề thi", "toán 12", "đề thi thử", "ôn thi đại học"],
   authors: [{ name: "lop12.com" }],
   creator: "lop12.com",
+  publisher: "lop12.com",
+  alternates: {
+    canonical: siteUrl,
+    types: {
+      'application/rss+xml': `${siteUrl}/feed.xml`,
+    },
+  },
   openGraph: {
     type: "website",
     locale: "vi_VN",
@@ -25,15 +32,18 @@ export const metadata: Metadata = {
     title: defaultTitle,
     description: defaultDescription,
     siteName: "lop12.com",
+    images: [{ url: '/favicon.svg' }]
   },
   twitter: {
     card: "summary_large_image",
     title: defaultTitle,
     description: defaultDescription,
+    images: ['/favicon.svg']
   },
   robots: {
     index: true,
     follow: true,
+    nocache: false,
     googleBot: {
       index: true,
       follow: true,
@@ -50,6 +60,19 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
 };
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Ngân hàng Câu hỏi TN THPT Môn Toán",
+  "url": siteUrl,
+  "description": defaultDescription,
+  "publisher": {
+    "@type": "Organization",
+    "name": "lop12.com"
+  }
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -57,6 +80,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body style={{ margin: 0, padding: 0, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Header />
         <main style={{ flex: 1 }}>

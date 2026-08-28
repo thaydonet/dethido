@@ -67,6 +67,10 @@ export default function AdminDashboard({ initialQuestions, user }: AdminDashboar
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Generator state
+  const [showGeneratorConfig, setShowGeneratorConfig] = useState(false);
+  const [genMcqCount, setGenMcqCount] = useState(12);
+  const [genMsqCount, setGenMsqCount] = useState(4);
+  const [genSaCount, setGenSaCount] = useState(6);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedExam, setGeneratedExam] = useState<Question[] | null>(null);
   const [examName, setExamName] = useState('');
@@ -383,15 +387,20 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
   };
 
   const handleGenerateExam = () => {
+    setShowGeneratorConfig(true);
+  };
+
+  const executeGenerateExam = () => {
     const mcqs = questions.filter(q => getQuestionType(q) === 'mcq');
     const msqs = questions.filter(q => getQuestionType(q) === 'msq');
     const sas = questions.filter(q => getQuestionType(q) === 'sa');
-    if (mcqs.length < 12 || msqs.length < 4 || sas.length < 6) {
-      alert(`Không đủ câu hỏi! Cần 12 MCQ, 4 MSQ, 6 SA. Có: ${mcqs.length} MCQ, ${msqs.length} MSQ, ${sas.length} SA.`);
+    if (mcqs.length < genMcqCount || msqs.length < genMsqCount || sas.length < genSaCount) {
+      alert(`Không đủ câu hỏi! Cần ${genMcqCount} MCQ, ${genMsqCount} MSQ, ${genSaCount} SA. Có: ${mcqs.length} MCQ, ${msqs.length} MSQ, ${sas.length} SA.`);
       return;
     }
     const shuffle = (arr: any[]) => [...arr].sort(() => 0.5 - Math.random());
-    setGeneratedExam([...shuffle(mcqs).slice(0, 12), ...shuffle(msqs).slice(0, 4), ...shuffle(sas).slice(0, 6)]);
+    setGeneratedExam([...shuffle(mcqs).slice(0, genMcqCount), ...shuffle(msqs).slice(0, genMsqCount), ...shuffle(sas).slice(0, genSaCount)]);
+    setShowGeneratorConfig(false);
     setIsGenerating(true);
   };
 
@@ -943,7 +952,7 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
               📥 Nhập câu hỏi từ JSON
             </button>
             <button onClick={handleGenerateExam} className={styles.generateBtn}>
-              ✨ Tạo đề ngẫu nhiên (12 MCQ + 4 MSQ + 6 SA)
+              ✨ Tạo đề ngẫu nhiên
             </button>
           </div>
         </div>
@@ -1254,12 +1263,45 @@ body{font-family:'Times New Roman',serif;max-width:210mm;margin:0 auto;padding:2
         </div>
       )}
 
+      {/* Generator Config Modal */}
+      {showGeneratorConfig && (
+        <div className={styles.generatorOverlay} onClick={e => { if (e.target === e.currentTarget) setShowGeneratorConfig(false); }}>
+          <div className={styles.generatorModal} style={{ maxWidth: '400px' }}>
+            <div className={styles.generatorHeader}>
+              <h2>Cấu hình đề ngẫu nhiên</h2>
+              <button onClick={() => setShowGeneratorConfig(false)} className={styles.closeBtn}>&times;</button>
+            </div>
+            <div className={styles.editModalBody}>
+              <div className={styles.editField}>
+                <label className={styles.editLabel}>Số câu Trắc nghiệm (MCQ)</label>
+                <input type="number" min="0" className={styles.editInput} value={genMcqCount} onChange={e => setGenMcqCount(parseInt(e.target.value) || 0)} />
+              </div>
+              <div className={styles.editField}>
+                <label className={styles.editLabel}>Số câu Đúng - sai (MSQ)</label>
+                <input type="number" min="0" className={styles.editInput} value={genMsqCount} onChange={e => setGenMsqCount(parseInt(e.target.value) || 0)} />
+              </div>
+              <div className={styles.editField}>
+                <label className={styles.editLabel}>Số câu Trả lời ngắn (SA)</label>
+                <input type="number" min="0" className={styles.editInput} value={genSaCount} onChange={e => setGenSaCount(parseInt(e.target.value) || 0)} />
+              </div>
+              <div style={{ marginTop: '1rem', color: '#4a5568', fontSize: '0.9rem' }}>
+                Tổng cộng: <strong>{genMcqCount + genMsqCount + genSaCount}</strong> câu
+              </div>
+            </div>
+            <div className={styles.editModalFooter}>
+              <button onClick={() => setShowGeneratorConfig(false)} className={styles.cancelBtn}>Hủy</button>
+              <button onClick={executeGenerateExam} className={styles.saveBtn}>✨ Tạo đề</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Generator Modal */}
       {isGenerating && generatedExam && (
         <div className={styles.generatorOverlay}>
           <div className={styles.generatorModal}>
             <div className={styles.generatorHeader}>
-              <h2>Tạo đề mới (22 câu)</h2>
+              <h2>Tạo đề mới ({generatedExam.length} câu)</h2>
               <button onClick={() => setIsGenerating(false)} className={styles.closeBtn}>&times;</button>
             </div>
             <div className={styles.generatorContent}>
